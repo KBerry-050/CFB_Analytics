@@ -15,7 +15,7 @@ NARROW_COL_WIDTH = "70px"  # short counting stats, W/L, single scores ("10-2", "
 PERCENT_COL_WIDTH = "130px"  # "Off Success%" header + "46.3%" body
 RATING_COL_WIDTH = "115px"  # "value (No. rank)" cells, e.g. "24.4 (No. 1)"
 
-CHART_SOURCE_NOTE = "Source: collegefootballdata.com        Graphic: kb_analytix"
+CHART_SOURCE_NOTE = "Source: collegefootballdata.com        Graphic: kb_analytix        Inspiration: @statsowar"
 CHART_SOURCE_NOTE_SIZE = 11
 
 MPL_RCPARAMS = {
