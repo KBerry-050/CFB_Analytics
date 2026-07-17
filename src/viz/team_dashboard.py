@@ -5,6 +5,7 @@ from src.data.team_profile import (
     get_team_advanced_game_stats,
     get_team_advanced_season_stats,
     get_team_game_stats,
+    get_team_pregame_win_probabilities,
     get_team_ratings,
     get_team_recruiting_ranking,
     get_team_records,
@@ -141,9 +142,18 @@ def team_game_log_table(team: str, year: int) -> GT:
     )
     df = df.merge(box_scores[["game_id", "totalYards"]], left_on="id", right_on="game_id", how="left")
     df["totalYards"] = pd.to_numeric(df["totalYards"], errors="coerce")
+
+    win_prob = get_team_pregame_win_probabilities(team, year)
+    win_prob["win_prob"] = win_prob["homeWinProbability"].where(
+        win_prob["homeTeam"] == team, 1 - win_prob["homeWinProbability"]
+    )
+    df = df.merge(win_prob[["gameId", "win_prob"]], left_on="id", right_on="gameId", how="left")
+
     df = df.merge(teams, on="opponent", how="left")
     df["color"] = df["color"].fillna("#333333")
     df = df.reset_index(drop=True)
+
+    is_upset = (df["result"] == "W") & (df["win_prob"] < 0.5) | (df["result"] == "L") & (df["win_prob"] > 0.5)
 
     gt = (
         GT(
@@ -156,6 +166,7 @@ def team_game_log_table(team: str, year: int) -> GT:
                     "location",
                     "result",
                     "score",
+                    "win_prob",
                     "totalYards",
                     "offense.ppa",
                     "offense.successRate",
@@ -168,7 +179,7 @@ def team_game_log_table(team: str, year: int) -> GT:
         .fmt_image(columns="logo")
         .fmt_integer(columns="totalYards")
         .fmt_number(columns=["offense.ppa", "defense.ppa"], decimals=2)
-        .fmt_percent(columns="offense.successRate", decimals=1)
+        .fmt_percent(columns=["offense.successRate", "win_prob"], decimals=1)
         .cols_label(
             date=html("Date"),
             logo=html(""),
@@ -176,6 +187,7 @@ def team_game_log_table(team: str, year: int) -> GT:
             location=html("Location"),
             result=html("Result"),
             score=html("Score"),
+            win_prob=html("Win Prob"),
             totalYards=html("Total Yards"),
             **{
                 "offense.ppa": html("Off PPA"),
@@ -183,7 +195,7 @@ def team_game_log_table(team: str, year: int) -> GT:
                 "defense.ppa": html("Def PPA"),
             },
         )
-        .cols_align(align="center", columns=["location", "result", "score", "totalYards"])
+        .cols_align(align="center", columns=["location", "result", "score", "win_prob", "totalYards"])
         .cols_width(
             {
                 "date": NARROW_COL_WIDTH,
@@ -192,6 +204,7 @@ def team_game_log_table(team: str, year: int) -> GT:
                 "location": "85px",
                 "result": NARROW_COL_WIDTH,
                 "score": "80px",
+                "win_prob": PERCENT_COL_WIDTH,
                 "totalYards": "100px",
                 "offense.ppa": "80px",
                 "offense.successRate": PERCENT_COL_WIDTH,
@@ -203,6 +216,11 @@ def team_game_log_table(team: str, year: int) -> GT:
     gt = style_team_text_by_color(gt, df["color"].tolist(), "opponent")
     gt = style_team_text_by_color(
         gt, [WIN_COLOR if r == "W" else LOSS_COLOR for r in df["result"]], "result"
+    )
+    gt = style_team_text_by_color(
+        gt,
+        [(WIN_COLOR if r == "W" else LOSS_COLOR) if upset else "#333333" for r, upset in zip(df["result"], is_upset)],
+        "win_prob",
     )
     return gt
 

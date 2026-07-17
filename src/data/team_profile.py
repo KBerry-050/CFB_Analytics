@@ -113,6 +113,19 @@ def get_team_records(team: str, year: int) -> pd.DataFrame:
     return _cached_team_records("records", team, year, fetch_records)
 
 
+def get_all_teams_records(year: int) -> pd.DataFrame:
+    """Season win/loss records for every team CFBD tracks (all classifications
+    — filter to FBS yourself, e.g. by inner-joining against `get_teams`).
+    One unfiltered API call, cached once per year."""
+
+    def fetch() -> pd.DataFrame:
+        with get_client() as client:
+            records = cfbd.GamesApi(client).get_records(year=year)
+        return _records_to_df(records)
+
+    return cached_dataframe(f"all_records_{year}", fetch)
+
+
 # --- efficiency / advanced metrics ------------------------------------------
 
 
@@ -154,6 +167,18 @@ def get_team_ppa_by_team(team: str, year: int) -> pd.DataFrame:
             return cfbd.MetricsApi(client).get_predicted_points_added_by_team(year=year, team=team)
 
     return _cached_team_records("ppa_by_team", team, year, fetch_records)
+
+
+def get_team_pregame_win_probabilities(team: str, year: int) -> pd.DataFrame:
+    """Pregame win probability + spread for each of the team's games.
+    Columns: season, seasonType, week, gameId, homeTeam, awayTeam, spread,
+    homeWinProbability — the caller flips `homeWinProbability` for `team`'s
+    own perspective when it played away."""
+    def fetch_records():
+        with get_client() as client:
+            return cfbd.MetricsApi(client).get_pregame_win_probabilities(year=year, team=team)
+
+    return _cached_team_records("pregame_win_probabilities", team, year, fetch_records)
 
 
 # --- ratings -----------------------------------------------------------------
@@ -235,16 +260,35 @@ def get_team_returning_production(team: str, year: int) -> pd.DataFrame:
     return _cached_team_records("returning_production", team, year, fetch_records)
 
 
-def get_team_transfers(team: str, year: int) -> pd.DataFrame:
-    """Transfer portal entries where the team is the origin or destination.
-    Not team-filterable server-side, so the full-year table is cached once."""
+def get_all_teams_returning_production(year: int) -> pd.DataFrame:
+    """Returning production (% of last season's PPA production back on the
+    roster) for every team — the standard roster-continuity metric in CFB
+    analytics. One unfiltered API call, cached once per year."""
+
+    def fetch() -> pd.DataFrame:
+        with get_client() as client:
+            records = cfbd.PlayersApi(client).get_returning_production(year=year)
+        return _records_to_df(records)
+
+    return cached_dataframe(f"all_returning_production_{year}", fetch)
+
+
+def get_all_transfers(year: int) -> pd.DataFrame:
+    """Every transfer portal entry for a season (all origins/destinations).
+    The endpoint isn't team-filterable, so this full table is what's actually
+    cached; `get_team_transfers` just slices it."""
 
     def fetch() -> pd.DataFrame:
         with get_client() as client:
             records = cfbd.PlayersApi(client).get_transfer_portal(year=year)
         return _records_to_df(records)
 
-    df = cached_dataframe(f"transfer_portal_{year}", fetch)
+    return cached_dataframe(f"transfer_portal_{year}", fetch)
+
+
+def get_team_transfers(team: str, year: int) -> pd.DataFrame:
+    """Transfer portal entries where the team is the origin or destination."""
+    df = get_all_transfers(year)
     return df[(df["origin"] == team) | (df["destination"] == team)].reset_index(drop=True)
 
 
@@ -280,6 +324,7 @@ _PROFILE_BUILDERS: dict[str, Callable[[str, int], pd.DataFrame]] = {
     "havoc_stats": get_team_havoc_stats,
     "adjusted_season_stats": get_team_adjusted_season_stats,
     "ppa_by_team": get_team_ppa_by_team,
+    "pregame_win_probabilities": get_team_pregame_win_probabilities,
     "ratings": get_team_ratings,
     "betting_lines": get_team_betting_lines,
     "player_season_stats": get_team_player_season_stats,
