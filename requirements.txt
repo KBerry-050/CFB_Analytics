@@ -3,3 +3,10 @@ pandas
 great_tables
 matplotlib
 python-dotenv
+requests
+pyarrow
+xlsxwriter
+openpyxl
+pillow
+google-api-python-client
+google-auth

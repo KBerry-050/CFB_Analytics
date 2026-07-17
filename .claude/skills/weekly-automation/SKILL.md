@@ -14,7 +14,7 @@ building on the corresponding skill:
 2. **Build** — render tables/charts via [[viz-style]] into a single report
    artifact (e.g. one combined HTML file, or a set of PNGs assembled into an
    HTML email body).
-3. **Deliver** — email the finished report.
+3. **Deliver** — email the finished report, and/or upload it to Google Drive.
 
 ## Delivery (email)
 
@@ -25,14 +25,39 @@ variables (loaded via `python-dotenv`, same as [[cfbd-data]]'s API key):
   credentials (e.g. a Gmail app password, not the main account password).
 - `REPORT_RECIPIENTS` — comma-separated list of destination addresses.
 
-Embed charts as inline images (`Content-ID` + `multipart/related`) rather than
-attachments, and inline the great_tables output as HTML in the message body,
-so the report is readable directly in an email client without opening
-attachments.
+Embed everything — charts and great_tables output alike — as inline images
+(`Content-ID` + `multipart/related`) rather than attachments, so the report is
+readable directly in an email client without opening attachments. **Never put
+raw GT `as_raw_html()` output in the message body** — email clients don't
+reliably render the CSS it emits (see [[viz-style]]'s "Emailing
+tables/dashboards" section). Use `send_gt_report()` from
+`src/app/send_report.py`, which renders GT tables to PNG before sending.
 
 Wrap the actual SMTP `.send_message()` call so failures are logged clearly
 (recipient, subject, error) — a silent failure on a scheduled run means no one
 notices the report never went out.
+
+## Delivery (Google Drive)
+
+An additional/alternative delivery path to email, via `src/app/upload_drive.py`.
+Auth is a **service account** (not OAuth user login) so it runs unattended —
+no browser consent step on a scheduled run. Config:
+
+- `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` — path to the service account's JSON key
+  (convention: `credentials/google-drive-service-account.json`, gitignored —
+  never commit it).
+- `GOOGLE_DRIVE_FOLDER_ID` — the target Drive folder's ID.
+
+Full one-time GCP setup steps (create project, enable Drive API, create
+service account, share the target folder with its email) are documented in
+`.env.example` — read those before assuming the feature is misconfigured.
+
+Use `upload_gt_report_to_drive(filename, *tables)` for GT tables/dashboards
+(same PNG-rendering path as `send_gt_report` — see [[viz-style]]) or
+`upload_file_to_drive(path)` for anything already-rendered (a chart PNG, an
+Excel export). Both return the file's Drive `webViewLink` — log or email that
+link so whoever's watching the pipeline can confirm delivery without opening
+Drive.
 
 ## Running it
 

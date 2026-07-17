@@ -20,6 +20,38 @@ than restating colors/fonts inline in individual chart/table scripts.
   `GT.fmt_image()` / `GT.cols_align()`, not embedded as text.
 - Keep number formatting consistent: one decimal place for rates/percentages,
   no decimals for counting stats (wins, TDs, etc.).
+- Set explicit `cols_width()` on every column rather than leaving it to
+  auto-size — headers like "Off Success%" or "24.4 (No. 1)"-style
+  value+rank cells wrap onto two lines otherwise. Use the named constants in
+  `src/viz/style.py` (`NARROW_COL_WIDTH`, `PERCENT_COL_WIDTH`,
+  `RATING_COL_WIDTH`) instead of picking pixel values from scratch.
+- Combining multiple GT tables into one page/export (a "dashboard")? Use
+  `src/viz/render.py::combine_gt_tables()` rather than hand-rolling the
+  wrapper `<div>` — a fixed `max-width` narrower than the actual table
+  content will silently clip columns instead of wrapping them.
+- Every table gets a source/attribution footnote via `base_table()`
+  (`SOURCE_NOTE` in `src/viz/style.py`) — don't add a one-off footnote in
+  individual chart/table files.
+- Title and footnote sizing is also set house-wide in `base_table()`
+  (`HEADING_TITLE_SIZE`, bold; `SOURCE_NOTE_SIZE`) — don't override per table.
+- Any team-specific table's `tab_header(title=...)` should use
+  `src/viz/style.py::team_header_title()` to put the team's logo inline
+  before the title text, rather than a plain string — this is the standard
+  for team dashboards/profile tables (see `src/viz/team_dashboard.py`).
+
+## Emailing tables/dashboards
+
+**Never email a GT table's `as_raw_html()` (or any HTML built from one)
+directly as the message body.** Gmail, Outlook, and most email clients don't
+reliably support the CSS grid/flexbox great_tables emits — the table degrades
+badly (this was confirmed the hard way). Always render to a PNG first via
+`src/viz/render.py::render_html_to_png()`, then send it as an inline image.
+
+For the common case — one or more GT tables, straight to someone's inbox —
+use `src/app/send_report.py::send_gt_report(subject, *tables)`. It combines
+the tables, renders to a cropped PNG via headless Chrome, and emails it inline
+in one call. Only reach for `send_html_report()` directly when the body truly
+needs to be live HTML (not table/dashboard content).
 
 ## Charts (matplotlib)
 
