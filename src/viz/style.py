@@ -5,9 +5,14 @@ TABLE_FONT = "Helvetica"
 HEADER_BG = "#1a1a2e"
 HEADER_TEXT = "#ffffff"
 ROW_STRIPE = "#f5f5f7"
-SOURCE_NOTE = html("Source: collegefootballdata.com&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Graphic: kb_analytix")
+SOURCE_NOTE = html(
+    '<div style="width:100%; text-align:center;">'
+    "Source: collegefootballdata.com&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Graphic: kb_analytix"
+    "</div>"
+)
 HEADING_TITLE_SIZE = "24px"
-SOURCE_NOTE_SIZE = "13px"
+HEADING_SUBTITLE_SIZE = "16px"
+SOURCE_NOTE_SIZE = "15px"
 
 # Minimum `cols_width()` values for common column shapes, at this house font/weight.
 # Anything narrower than these wraps its header onto two lines.
@@ -17,6 +22,10 @@ RATING_COL_WIDTH = "115px"  # "value (No. rank)" cells, e.g. "24.4 (No. 1)"
 
 CHART_SOURCE_NOTE = "Source: collegefootballdata.com        Graphic: kb_analytix        Inspiration: @statsowar"
 CHART_SOURCE_NOTE_SIZE = 11
+
+# Shared positive/negative indicator colors (upset highlighting, stat deltas, etc.)
+WIN_COLOR = "#1b7a3d"
+LOSS_COLOR = "#b3261e"
 
 MPL_RCPARAMS = {
     "font.family": "sans-serif",
@@ -64,7 +73,9 @@ def base_table(gt: GT) -> GT:
             row_striping_background_color=ROW_STRIPE,
             heading_title_font_size=HEADING_TITLE_SIZE,
             heading_title_font_weight="bold",
+            heading_subtitle_font_size=HEADING_SUBTITLE_SIZE,
             source_notes_font_size=SOURCE_NOTE_SIZE,
+            source_notes_padding=12,
         )
         .tab_source_note(source_note=SOURCE_NOTE)
     )
@@ -76,6 +87,24 @@ def team_header_title(title_text: str, logo_url: str | None):
     across the report, not just the first table on a page."""
     logo_html = f'<img src="{logo_url}" style="height:32px; vertical-align:middle; margin-right:10px;">' if logo_url else ""
     return html(f"{logo_html}{title_text}")
+
+
+def dual_logo_header(title_text: str, left_logo_url: str | None, right_logo_html: str | None):
+    """A `tab_header(title=...)` value with one logo pinned top-left and a
+    second top-right, title centered between them. Use for any comparison
+    table branded by two marks (e.g. a team's primary logo + an alternate
+    mark) rather than the single-logo `team_header_title`.
+
+    Bold is set inline (not left to `heading_title_font_weight`) — custom
+    HTML dropped into `title=` sits inside GT's title cell but doesn't
+    reliably inherit that table option's font-weight.
+    """
+    left = f'<img src="{left_logo_url}" style="height:40px;">' if left_logo_url else "<span></span>"
+    right = right_logo_html or "<span></span>"
+    return html(
+        f'<div style="display:flex; align-items:center; justify-content:space-between; width:100%;">'
+        f'{left}<span style="font-weight:bold;">{title_text}</span>{right}</div>'
+    )
 
 
 def style_team_text_by_color(gt: GT, colors: list[str], team_col: str) -> GT:

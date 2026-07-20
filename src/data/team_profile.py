@@ -79,6 +79,21 @@ def get_team_schedule(team: str, year: int) -> pd.DataFrame:
     return _cached_team_records("schedule", team, year, fetch_records)
 
 
+def get_all_teams_schedule(year: int) -> pd.DataFrame:
+    """Every FBS game in a season (`GamesApi.get_games` isn't team-filterable
+    the same call still needs a scope, so this passes classification="fbs"
+    instead). One call, cached once per year — use for anything needing the
+    full schedule (e.g. league-wide scoring ranks) rather than looping
+    `get_team_schedule` per team."""
+
+    def fetch() -> pd.DataFrame:
+        with get_client() as client:
+            games = cfbd.GamesApi(client).get_games(year=year, classification="fbs")
+        return _records_to_df(games)
+
+    return cached_dataframe(f"all_schedule_fbs_{year}", fetch)
+
+
 def get_team_game_stats(team: str, year: int) -> pd.DataFrame:
     """One row per team per game (so both sides of each matchup are present),
     with each box-score category (`totalYards`, `possessionTime`, ...) pivoted
@@ -103,6 +118,23 @@ def get_team_game_stats(team: str, year: int) -> pd.DataFrame:
         return pd.DataFrame(rows)
 
     return cached_dataframe(f"game_team_stats_{_slug(team)}_{year}", fetch)
+
+
+def get_team_season_totals(team: str, year: int) -> pd.DataFrame:
+    """Season-total team stats (yards, TDs, completions, possession time,
+    ...), pivoted from the API's long category/value list into one wide row.
+    Includes the team's own totals only (CFBD also returns "...Opponent"
+    categories — stats the team allowed — which are left in as-is if present)."""
+
+    def fetch() -> pd.DataFrame:
+        with get_client() as client:
+            stats = cfbd.StatsApi(client).get_team_stats(year=year, team=team)
+        row = {"team": team, "year": year}
+        for s in stats:
+            row[s.stat_name] = float(s.stat_value.actual_instance)
+        return pd.DataFrame([row])
+
+    return cached_dataframe(f"season_totals_{_slug(team)}_{year}", fetch)
 
 
 def get_team_records(team: str, year: int) -> pd.DataFrame:
@@ -318,6 +350,7 @@ _PROFILE_BUILDERS: dict[str, Callable[[str, int], pd.DataFrame]] = {
     "talent": get_team_talent,
     "schedule": get_team_schedule,
     "game_team_stats": get_team_game_stats,
+    "season_totals": get_team_season_totals,
     "records": get_team_records,
     "advanced_season_stats": get_team_advanced_season_stats,
     "advanced_game_stats": get_team_advanced_game_stats,

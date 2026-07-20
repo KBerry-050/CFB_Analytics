@@ -15,16 +15,15 @@ from src.data.team_profile import (
 from src.data.teams import get_teams
 from src.viz.render import combine_gt_tables, render_html_to_png
 from src.viz.style import (
+    LOSS_COLOR,
     NARROW_COL_WIDTH,
     PERCENT_COL_WIDTH,
     RATING_COL_WIDTH,
+    WIN_COLOR,
     base_table,
     style_team_text_by_color,
     team_header_title,
 )
-
-WIN_COLOR = "#1b7a3d"
-LOSS_COLOR = "#b3261e"
 
 
 def _team_logo_url(team: str, year: int) -> str | None:
