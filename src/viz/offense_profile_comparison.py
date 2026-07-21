@@ -1,3 +1,11 @@
+"""Main Offensive Report — the house template for comparing one team's
+offense across two seasons: per-game production, efficiency, and roster
+continuity (overall + by position group). Works for any team/year pair
+(`offense_profile_comparison_table(team, year_a, year_b)`); Notre Dame was
+the pilot case. See the `viz-style` skill for how this fits the project's
+other report templates.
+"""
+
 import pandas as pd
 from great_tables import GT, html, loc, style
 
@@ -5,12 +13,13 @@ from src.data.team_profile import (
     get_all_teams_schedule,
     get_team_advanced_season_stats,
     get_team_game_stats,
-    get_team_returning_production,
     get_team_roster,
     get_team_season_totals,
 )
 from src.data.teams import get_teams
 from src.viz.style import LOSS_COLOR, WIN_COLOR, base_table, dual_logo_header
+
+REPORT_NAME = "Main Offensive Report"
 
 # Position-group breakdown for the roster-continuity section. Usage/PPA-based
 # returning-production splits (what CFBD's `returning_production` endpoint
@@ -34,7 +43,6 @@ METRICS = [
     ("EFFICIENCY", "Points / Opportunity", "points_per_opportunity", lambda v: f"{v:.2f}", lambda d: f"{d:+.2f}", False, True),
     ("EFFICIENCY", "Stuff Rate", "stuff_rate", lambda v: f"{v:.1%}", lambda d: f"{d * 100:+.1f} pts", True, True),
     ("EFFICIENCY", "Havoc Rate Allowed", "havoc_allowed", lambda v: f"{v:.1%}", lambda d: f"{d * 100:+.1f} pts", True, True),
-    ("ROSTER CONTINUITY", "Returning Production", "returning_production_pct", lambda v: f"{v:.1%}", lambda d: f"{d * 100:+.1f} pts", False, True),
     *[
         (
             "ROSTER CONTINUITY",
@@ -81,9 +89,11 @@ def _ppg_national_rank(team: str, year: int) -> int | None:
 
 def _season_offense_data(team: str, year: int) -> dict:
     """Pull and derive every value the comparison table needs for one
-    team-season: per-game production, advanced efficiency splits, and
-    roster-continuity signals (overall returning production % from the prior
-    year, plus a position-group roster-continuity breakdown)."""
+    team-season: per-game production, advanced efficiency splits, and a
+    position-group roster-continuity breakdown. (CFBD's overall
+    `returning_production` % isn't offense-specific — it blends in defense
+    and special teams — so it's deliberately not used here; only the
+    offense-position-group breakdown is.)"""
     totals = get_team_season_totals(team, year).iloc[0]
     advanced = get_team_advanced_season_stats(team, year).iloc[0]
     games = totals["games"]
@@ -91,9 +101,6 @@ def _season_offense_data(team: str, year: int) -> dict:
     box_scores = get_team_game_stats(team, year)
     box_scores = box_scores[box_scores["team"] == team]
     points = pd.to_numeric(box_scores["points"], errors="coerce").sum()
-
-    returning = get_team_returning_production(team, year)
-    returning_pct = returning["percentPPA"].iloc[0] if not returning.empty else None
 
     by_position = _returning_by_position(team, year - 1, year)
 
@@ -111,7 +118,6 @@ def _season_offense_data(team: str, year: int) -> dict:
         "points_per_opportunity": advanced["offense.pointsPerOpportunity"],
         "stuff_rate": advanced["offense.stuffRate"],
         "havoc_allowed": advanced["offense.havoc.total"],
-        "returning_production_pct": returning_pct,
         **{f"returning_{pos.lower()}": by_position[pos] for pos in POSITION_GROUPS},
     }
 
@@ -168,10 +174,10 @@ def build_offense_profile_comparison(team: str, year_a: int, year_b: int) -> pd.
 
 
 def offense_profile_comparison_table(team: str, year_a: int, year_b: int) -> GT:
-    """Notre Dame-style (any team works) offensive profile comparison across
-    two seasons: per-game production, efficiency, and roster continuity
-    (overall + by position group), with a colored delta column and the
-    team's logo in both top corners."""
+    """The "Main Offensive Report" (see module docstring) for any team: an
+    offensive profile comparison across two seasons — per-game production,
+    efficiency, and roster continuity (overall + by position group) — with a
+    colored delta column and the team's logo in both top corners."""
     df = build_offense_profile_comparison(team, year_a, year_b)
 
     teams = get_teams(year_b)

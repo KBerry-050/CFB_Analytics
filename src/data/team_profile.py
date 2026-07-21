@@ -276,6 +276,44 @@ def get_team_player_season_stats(team: str, year: int) -> pd.DataFrame:
     return _cached_team_records("player_season_stats", team, year, fetch_records)
 
 
+def _flatten_player_overview(overview_dict: dict) -> dict:
+    row = {
+        "player": overview_dict["name"],
+        "team": overview_dict["team"],
+        "position": overview_dict["position"],
+        "games": overview_dict["games"],
+    }
+    for category in overview_dict["boxScoreStats"]["categories"]:
+        for stat in category["stats"]:
+            row[f"{category['name']}.{stat['name']}"] = stat["value"]
+    for scope in ("average", "total"):
+        for key, value in overview_dict["ppa"][scope].items():
+            row[f"ppa.{scope}.{key}"] = value
+    for key, value in overview_dict["usage"].items():
+        row[f"usage.{key}"] = value
+    return row
+
+
+def get_player_season_overview(player_name: str, team: str, year: int) -> pd.DataFrame:
+    """Box-score stats (passing/rushing/etc., flattened out of their nested
+    category/stat lists) plus PPA and usage splits for one named player's
+    season. `PlayersApi.get_player_season_overview` needs a numeric player
+    id, not a name, so this looks the player up first via the team's
+    player-season stats."""
+
+    def fetch() -> pd.DataFrame:
+        season_stats = get_team_player_season_stats(team, year)
+        matches = season_stats[season_stats["player"] == player_name]
+        if matches.empty:
+            raise ValueError(f"No player named {player_name!r} found for {team} in {year}.")
+        player_id = int(matches["playerId"].iloc[0])
+        with get_client() as client:
+            overview = cfbd.PlayersApi(client).get_player_season_overview(player_id=player_id, year=year)
+        return pd.DataFrame([_flatten_player_overview(overview.to_dict())])
+
+    return cached_dataframe(f"player_overview_{_slug(team)}_{_slug(player_name)}_{year}", fetch)
+
+
 def get_team_player_usage(team: str, year: int) -> pd.DataFrame:
     def fetch_records():
         with get_client() as client:
@@ -396,6 +434,93 @@ def get_team_plays(team: str, year: int, week: int) -> pd.DataFrame:
             return cfbd.PlaysApi(client).get_plays(year=year, week=week, team=team)
 
     return _cached_team_records(f"plays_wk{week}", team, year, fetch_records)
+
+
+def get_team_play_stats(team: str, year: int) -> pd.DataFrame:
+    """Per-player, per-play stat rows (Completion, Incompletion, Rush, Sack
+    Taken, Interception Thrown, Touchdown, ...) for every game the team
+    played that season. `PlaysApi.get_play_stats` requires a week filter, so
+    this loops over the team's actual scheduled weeks (via
+    `get_team_schedule`) rather than guessing a week range; cached once per
+    team/year as a single combined table."""
+
+    def fetch() -> pd.DataFrame:
+        weeks = sorted(get_team_schedule(team, year)["week"].unique().tolist())
+        frames = []
+        with get_client() as client:
+            plays_api = cfbd.PlaysApi(client)
+            for week in weeks:
+                stats = plays_api.get_play_stats(year=year, week=int(week), team=team)
+                if stats:
+                    frames.append(_records_to_df(stats))
+        return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+
+    return cached_dataframe(f"play_stats_{_slug(team)}_{year}", fetch)
+
+
+def get_qb_pass_chart_data(player_name: str, team: str, year: int) -> pd.DataFrame:
+    """Every pass attempt thrown by `player_name` in a season, classified
+    into complete/incomplete/interception with field position, receiver,
+    touchdown flag, and game situation (quarter/clock/down/distance) — the
+    dataset behind the interactive pass-chart artifact. Built from
+    `get_team_play_stats` (not separately cached — cheap to recompute from
+    that already-cached table).
+
+    Field position is line-of-scrimmage only; CFBD has no throw-depth or
+    lateral (hash) data, so `end_pos` reflects yards gained (including YAC),
+    not a real target location — see the pass-chart artifact's own caption.
+    """
+    stats = get_team_play_stats(team, year)
+    passer = stats[stats["athleteName"] == player_name]
+    if passer.empty:
+        raise ValueError(f"No play-stats rows for {player_name!r} on {team} in {year}.")
+
+    rows = []
+    for play_id, group in passer.groupby("playId"):
+        types = set(group["statType"])
+        first = group.iloc[0]
+
+        if "Interception Thrown" in types:
+            outcome = "interception"
+        elif "Completion" in types:
+            outcome = "complete"
+        elif "Incompletion" in types:
+            outcome = "incomplete"
+        else:
+            continue  # Rush, Sack Taken, or a trick-play Reception — not a pass attempt
+
+        yards_row = group[group["statType"].isin(["Completion", "Incompletion", "Interception Thrown"])]
+        yards_gained = int(yards_row["stat"].iloc[0]) if not yards_row.empty else 0
+        start_pos = 100 - int(first["yardsToGoal"])
+        end_pos = start_pos + yards_gained if outcome == "complete" else start_pos
+
+        receiver = None
+        if outcome == "complete":
+            play_all = stats[stats["playId"] == play_id]
+            rec_rows = play_all[(play_all["statType"] == "Reception") & (play_all["athleteName"] != player_name)]
+            if not rec_rows.empty:
+                receiver = rec_rows["athleteName"].iloc[0]
+
+        rows.append(
+            {
+                "week": int(first["week"]),
+                "opponent": first["opponent"],
+                "down": int(first["down"]),
+                "distance": int(first["distance"]),
+                "start_pos": start_pos,
+                "end_pos": end_pos,
+                "yards_gained": yards_gained,
+                "outcome": outcome,
+                "receiver": receiver,
+                "period": int(first["period"]),
+                "clock_minutes": int(first["clock.minutes"]),
+                "clock_seconds": int(first["clock.seconds"]),
+                "is_touchdown": "Touchdown" in types,
+            }
+        )
+
+    df = pd.DataFrame(rows).sort_values("week", kind="stable").reset_index(drop=True)
+    return df
 
 
 def get_team_drives(team: str, year: int) -> pd.DataFrame:

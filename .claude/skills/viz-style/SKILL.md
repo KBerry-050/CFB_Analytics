@@ -9,6 +9,33 @@ All tables and charts in this project should look like they came from the same
 report. Style definitions live in `src/viz/style.py` — import from there rather
 than restating colors/fonts inline in individual chart/table scripts.
 
+## Named report templates
+
+Reusable, house-branded report types — generalized by `team`/`year` params,
+not hardcoded to whichever team they were first built for:
+
+- **Team Dashboard** — season summary + game log for one team/year.
+  `src/viz/team_dashboard.py::team_season_summary_table()` /
+  `team_game_log_table()`. Pilot case: Notre Dame.
+- **Main Offensive Report** — one team's offensive profile (per-game
+  production, efficiency, roster continuity) compared across two seasons.
+  `src/viz/offense_profile_comparison.py::offense_profile_comparison_table(team, year_a, year_b)`.
+  Pilot case: Notre Dame 2024 vs. 2025. Uses `dual_logo_header()` (team logo
+  in both top corners) rather than the single-logo `team_header_title()`.
+- **QB Pass Chart** — interactive (not static-image) per-game pass chart: an
+  animated vertical field where each throw draws in as a green completion
+  line or red/amber miss marker. `src/viz/qb_pass_chart.py::render_qb_pass_chart(player_name, team, year, out_path)`.
+  Pilot case: Notre Dame's C.J. Carr, 2025 — first prototyped as a Claude
+  Artifact, then formalized into the repo. Unlike the other templates this
+  has no PNG/email path — it's a standalone HTML file (open directly or
+  publish as an Artifact), built from `qb_pass_chart_template.html`
+  (`{{PLAYER}}`/`{{TEAM}}`/`{{YEAR}}`/`{{DATA}}` placeholders, plain
+  `str.replace` — no templating dependency).
+
+When asked to build a new report "like" one of these for a different team,
+call the existing function with new `team`/`year` args rather than copying
+the file — that's the point of keeping them parameterized.
+
 ## Tables (great_tables)
 
 - Use `great_tables.GT` for all tabular output — not raw pandas `.to_html()` or

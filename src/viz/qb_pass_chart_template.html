@@ -1,0 +1,704 @@
+<title>{{PLAYER}} — Pass Chart</title>
+<style>
+  :root {
+    --bg: #eef0f3;
+    --surface: #ffffff;
+    --surface-border: #dde1e6;
+    --text: #12181f;
+    --text-muted: #5b6472;
+    --text-faint: #8b93a0;
+    --field-bg: #234a34;
+    --field-bg-2: #1f4530;
+    --field-line: rgba(245, 240, 224, 0.55);
+    --field-line-soft: rgba(245, 240, 224, 0.3);
+    --endzone: rgba(0, 0, 0, 0.22);
+    --lane-guide: rgba(245, 240, 224, 0.14);
+    --accent: #9c7a1f;
+    --accent-soft: rgba(156, 122, 31, 0.12);
+    --complete: #38c172;
+    --incomplete: #e2453a;
+    --intercept: #f0a93e;
+    --touchdown: #ffd447;
+    --touchdown-outline: #7a5b00;
+    --shadow: 0 1px 2px rgba(18, 24, 31, 0.06), 0 8px 24px rgba(18, 24, 31, 0.06);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0f14;
+      --surface: #131a22;
+      --surface-border: #232d38;
+      --text: #e8ecef;
+      --text-muted: #93a0ac;
+      --text-faint: #616d79;
+      --field-bg: #16301f;
+      --field-bg-2: #122a1b;
+      --field-line: rgba(232, 224, 196, 0.45);
+      --field-line-soft: rgba(232, 224, 196, 0.24);
+      --endzone: rgba(0, 0, 0, 0.32);
+      --lane-guide: rgba(232, 224, 196, 0.1);
+      --accent: #d9b04c;
+      --accent-soft: rgba(217, 176, 76, 0.14);
+      --complete: #45d485;
+      --incomplete: #ff6f62;
+      --intercept: #eea23f;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0b0f14; --surface: #131a22; --surface-border: #232d38;
+    --text: #e8ecef; --text-muted: #93a0ac; --text-faint: #616d79;
+    --field-bg: #16301f; --field-bg-2: #122a1b;
+    --field-line: rgba(232, 224, 196, 0.45); --field-line-soft: rgba(232, 224, 196, 0.24);
+    --endzone: rgba(0, 0, 0, 0.32); --lane-guide: rgba(232, 224, 196, 0.1);
+    --accent: #d9b04c; --accent-soft: rgba(217, 176, 76, 0.14);
+    --complete: #45d485; --incomplete: #ff6f62; --intercept: #eea23f;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px rgba(0, 0, 0, 0.35);
+  }
+
+  :root[data-theme="light"] {
+    --bg: #eef0f3; --surface: #ffffff; --surface-border: #dde1e6;
+    --text: #12181f; --text-muted: #5b6472; --text-faint: #8b93a0;
+    --field-bg: #234a34; --field-bg-2: #1f4530;
+    --field-line: rgba(245, 240, 224, 0.55); --field-line-soft: rgba(245, 240, 224, 0.3);
+    --endzone: rgba(0, 0, 0, 0.22); --lane-guide: rgba(245, 240, 224, 0.14);
+    --accent: #9c7a1f; --accent-soft: rgba(156, 122, 31, 0.12);
+    --complete: #38c172; --incomplete: #e2453a; --intercept: #f0a93e;
+    --shadow: 0 1px 2px rgba(18, 24, 31, 0.06), 0 8px 24px rgba(18, 24, 31, 0.06);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 24px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    border-bottom: 1px solid var(--surface-border);
+    padding-bottom: 18px;
+  }
+
+  .eyebrow {
+    margin: 0 0 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+
+  .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; flex: none; }
+  .dot-swatch { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+  .diamond-swatch { width: 8px; height: 8px; display: inline-block; flex: none; transform: rotate(45deg); border-radius: 2px; }
+  .star-swatch {
+    width: 12px; height: 12px; display: inline-block; flex: none;
+    background: var(--touchdown);
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .game-select-wrap { display: flex; align-items: center; gap: 10px; }
+
+  label.select-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  select#gameSelect {
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
+    padding: 9px 34px 9px 12px;
+    cursor: pointer;
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+    background-position: calc(100% - 17px) center, calc(100% - 12px) center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+
+  select#gameSelect:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .replay-btn {
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 8px 16px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .replay-btn:hover { border-color: var(--accent); }
+  .replay-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .replay-btn:disabled { opacity: 0.5; cursor: default; }
+
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: var(--shadow);
+  }
+
+  .stat-label {
+    margin: 0 0 3px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .stat-value {
+    margin: 0;
+    font-family: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
+    font-size: 20px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .field-panel {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .field-caption {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+    color: var(--text-faint);
+  }
+
+  .field-caption b { color: var(--text); font-size: 13px; }
+
+  .field-wrap { width: 100%; max-width: 380px; margin: 0 auto; }
+
+  svg#field { width: 100%; height: auto; display: block; }
+
+  .down-labels {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 380px;
+    margin: 0 auto;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .note {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-faint);
+    max-width: 68ch;
+  }
+
+  .tooltip {
+    position: fixed;
+    z-index: 20;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 8px 10px;
+    border-radius: 6px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -8px);
+    transition: opacity 0.1s ease;
+    white-space: nowrap;
+    font-family: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  }
+
+  .tooltip.visible { opacity: 1; }
+  .tooltip b { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">{{TEAM}} &middot; {{YEAR}} Season</p>
+      <h1>{{PLAYER}} — Pass Chart</h1>
+    </div>
+    <div class="legend">
+      <span class="legend-item"><span class="swatch" style="background:var(--complete)"></span>Complete</span>
+      <span class="legend-item"><span class="dot-swatch" style="background:var(--incomplete)"></span>Incomplete</span>
+      <span class="legend-item"><span class="diamond-swatch" style="background:var(--intercept)"></span>Interception</span>
+      <span class="legend-item"><span class="star-swatch"></span>Touchdown</span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="game-select-wrap">
+      <label class="select-label" for="gameSelect">Game</label>
+      <select id="gameSelect"></select>
+    </div>
+    <button class="replay-btn" id="replayBtn" type="button">&#8635; Replay drive</button>
+  </div>
+
+  <section class="summary-row" id="summaryRow" aria-live="polite"></section>
+
+  <section class="field-panel">
+    <div class="field-caption">
+      <span>Own goal</span>
+      <b id="fieldCaption">&nbsp;</b>
+      <span>Opp. goal</span>
+    </div>
+    <div class="field-wrap">
+      <svg id="field" viewBox="0 0 320 760" role="img" aria-label="Football field showing pass locations"></svg>
+    </div>
+    <div class="down-labels">
+      <span>1st down</span><span>2nd down</span><span>3rd down</span><span>4th down</span>
+    </div>
+  </section>
+
+  <p class="note">
+    Each throw is placed by its line of scrimmage (vertical axis) and down (horizontal lane) — CFBD doesn't track throw depth or hash position, so the horizontal spread encodes down, not real field width. Completions draw a line for the yards gained; incompletions and interceptions mark the snap spot only. Plays animate in the order they were run, then hold as the full drive picture.
+  </p>
+</div>
+
+<div class="tooltip" id="tooltip" role="tooltip"></div>
+
+<script>
+  const PLAYS = {{DATA}};
+  const NS = "http://www.w3.org/2000/svg";
+
+  // --- field geometry -------------------------------------------------
+  const VB_W = 320, VB_H = 760;
+  const EZ = 60; // end zone height
+  const FIELD_TOP = EZ, FIELD_H = VB_H - EZ * 2;
+  const MARGIN_X = 34;
+  const LANE_X = [1, 3, 5, 7].map((n) => MARGIN_X + ((VB_W - MARGIN_X * 2) * n) / 8);
+
+  function yFor(pos) {
+    return FIELD_TOP + FIELD_H * (1 - pos / 100);
+  }
+  function xFor(down) {
+    return LANE_X[Math.min(Math.max(down, 1), 4) - 1];
+  }
+
+  // --- games ------------------------------------------------------------
+  const games = [];
+  const seen = new Set();
+  for (const p of PLAYS) {
+    const key = p.week + "|" + p.opponent;
+    if (!seen.has(key)) { seen.add(key); games.push({ week: p.week, opponent: p.opponent }); }
+  }
+
+  const select = document.getElementById("gameSelect");
+  games.forEach((g, i) => {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = "Week " + g.week + " — " + g.opponent;
+    select.appendChild(opt);
+  });
+
+  function ordinal(n) {
+    if (n === 1) return "1st";
+    if (n === 2) return "2nd";
+    if (n === 3) return "3rd";
+    return n + "th";
+  }
+  function outcomeLabel(o) {
+    return o === "complete" ? "Complete" : o === "incomplete" ? "Incomplete" : "Interception";
+  }
+
+  function starPoints(cx, cy, outerR, innerR) {
+    const pts = [];
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? outerR : innerR;
+      const angle = (Math.PI / 5) * i - Math.PI / 2;
+      pts.push((cx + r * Math.cos(angle)).toFixed(2) + "," + (cy + r * Math.sin(angle)).toFixed(2));
+    }
+    return pts.join(" ");
+  }
+
+  // --- static field markings --------------------------------------------
+  const svg = document.getElementById("field");
+
+  function buildField() {
+    svg.innerHTML = "";
+
+    const bg = document.createElementNS(NS, "rect");
+    bg.setAttribute("x", 0); bg.setAttribute("y", EZ);
+    bg.setAttribute("width", VB_W); bg.setAttribute("height", FIELD_H);
+    bg.setAttribute("fill", "var(--field-bg)");
+    svg.appendChild(bg);
+
+    [["north", 0], ["south", VB_H - EZ]].forEach(([_, y]) => {
+      const ez = document.createElementNS(NS, "rect");
+      ez.setAttribute("x", 0); ez.setAttribute("y", y);
+      ez.setAttribute("width", VB_W); ez.setAttribute("height", EZ);
+      ez.setAttribute("fill", "var(--endzone)");
+      svg.appendChild(ez);
+    });
+
+    for (let yard = 0; yard <= 100; yard += 5) {
+      const y = yFor(yard);
+      const line = document.createElementNS(NS, "line");
+      line.setAttribute("x1", 8); line.setAttribute("x2", VB_W - 8);
+      line.setAttribute("y1", y); line.setAttribute("y2", y);
+      const major = yard % 10 === 0;
+      line.setAttribute("stroke", major ? "var(--field-line)" : "var(--field-line-soft)");
+      line.setAttribute("stroke-width", major ? 1.2 : 0.7);
+      svg.appendChild(line);
+
+      if (major && yard > 0 && yard < 100) {
+        const num = yard <= 50 ? yard : 100 - yard;
+        [16, VB_W - 16].forEach((x) => {
+          const t = document.createElementNS(NS, "text");
+          t.setAttribute("x", x); t.setAttribute("y", y + 4);
+          t.setAttribute("text-anchor", "middle");
+          t.setAttribute("font-size", "11");
+          t.setAttribute("font-weight", "700");
+          t.setAttribute("fill", "var(--field-line)");
+          t.setAttribute("font-family", "ui-monospace, 'SF Mono', monospace");
+          t.textContent = num;
+          svg.appendChild(t);
+        });
+      }
+    }
+
+    [0, 100].forEach((yard) => {
+      const line = document.createElementNS(NS, "line");
+      const y = yFor(yard);
+      line.setAttribute("x1", 0); line.setAttribute("x2", VB_W);
+      line.setAttribute("y1", y); line.setAttribute("y2", y);
+      line.setAttribute("stroke", "var(--field-line)");
+      line.setAttribute("stroke-width", 2);
+      svg.appendChild(line);
+    });
+
+    // sidelines
+    [4, VB_W - 4].forEach((x) => {
+      const line = document.createElementNS(NS, "line");
+      line.setAttribute("x1", x); line.setAttribute("x2", x);
+      line.setAttribute("y1", 0); line.setAttribute("y2", VB_H);
+      line.setAttribute("stroke", "var(--field-line)");
+      line.setAttribute("stroke-width", 1.5);
+      svg.appendChild(line);
+    });
+
+    // down-lane guides
+    LANE_X.forEach((x) => {
+      const line = document.createElementNS(NS, "line");
+      line.setAttribute("x1", x); line.setAttribute("x2", x);
+      line.setAttribute("y1", FIELD_TOP); line.setAttribute("y2", FIELD_TOP + FIELD_H);
+      line.setAttribute("stroke", "var(--lane-guide)");
+      line.setAttribute("stroke-width", 8);
+      svg.appendChild(line);
+    });
+
+    const playLayer = document.createElementNS(NS, "g");
+    playLayer.setAttribute("id", "playLayer");
+    svg.appendChild(playLayer);
+  }
+
+  // --- summary ------------------------------------------------------------
+  function renderSummary(plays) {
+    const comp = plays.filter((p) => p.outcome === "complete").length;
+    const inc = plays.filter((p) => p.outcome === "incomplete").length;
+    const ints = plays.filter((p) => p.outcome === "interception").length;
+    const yards = plays.filter((p) => p.outcome === "complete").reduce((s, p) => s + p.yards_gained, 0);
+    const pct = plays.length ? ((comp / plays.length) * 100).toFixed(1) : "0.0";
+
+    const cards = [
+      ["Comp / Att", comp + "/" + plays.length],
+      ["Comp %", pct + "%"],
+      ["Yards", yards],
+      ["INT", ints],
+    ];
+    document.getElementById("summaryRow").innerHTML = cards
+      .map(([l, v]) => '<div class="stat-card"><p class="stat-label">' + l + '</p><p class="stat-value">' + v + "</p></div>")
+      .join("");
+  }
+
+  // --- tooltip ------------------------------------------------------------
+  const tooltip = document.getElementById("tooltip");
+  function periodLabel(period) {
+    if (period <= 4) return ordinal(period) + " Qtr";
+    const ot = period - 4;
+    return ot === 1 ? "OT" : ot + "OT";
+  }
+  function clockLabel(play) {
+    return play.clock_minutes + ":" + String(play.clock_seconds).padStart(2, "0");
+  }
+
+  function showTooltip(e, play) {
+    const receiverLine = play.outcome === "complete" && play.receiver ? play.receiver + "<br>" : "";
+    const label = outcomeLabel(play.outcome) + (play.is_touchdown ? " — TD" : "");
+    tooltip.innerHTML =
+      "<b>" + label + "</b><br>" +
+      receiverLine +
+      periodLabel(play.period) + " &middot; " + clockLabel(play) + "<br>" +
+      ordinal(play.down) + " &amp; " + play.distance + "<br>" +
+      (play.outcome === "complete" ? (play.yards_gained >= 0 ? "+" : "") + play.yards_gained + " yds" : "no gain");
+    tooltip.classList.add("visible");
+    positionTooltip(e);
+  }
+  function positionTooltip(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    tooltip.style.left = rect.left + rect.width / 2 + "px";
+    tooltip.style.top = rect.top - 10 + "px";
+  }
+  function hideTooltip() { tooltip.classList.remove("visible"); }
+
+  // --- play rendering + animation -----------------------------------------
+  let pendingTimeouts = [];
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function jitteredX(down, index, sameCount) {
+    const base = xFor(down);
+    if (sameCount <= 1) return base;
+    const spread = 14;
+    const offset = (index - (sameCount - 1) / 2) * (spread / Math.max(sameCount - 1, 1));
+    return base + offset;
+  }
+
+  function drawPlay(play, index, group) {
+    const layer = document.getElementById("playLayer");
+    const x = jitteredX(play.down, index, group.length);
+    const y1 = yFor(play.start_pos);
+    const y2 = yFor(play.end_pos);
+
+    const wrap = document.createElementNS(NS, "g");
+    wrap.style.cursor = "pointer";
+    wrap.setAttribute("tabindex", "0");
+    wrap.setAttribute("role", "img");
+    wrap.setAttribute(
+      "aria-label",
+      outcomeLabel(play.outcome) +
+        (play.is_touchdown ? ", touchdown" : "") +
+        (play.outcome === "complete" && play.receiver ? " to " + play.receiver : "") +
+        ", " + periodLabel(play.period) + ", " + clockLabel(play) + " remaining" +
+        ", " + ordinal(play.down) + " and " + play.distance
+    );
+
+    if (play.outcome === "complete" && play.start_pos !== play.end_pos) {
+      const line = document.createElementNS(NS, "line");
+      line.setAttribute("x1", x); line.setAttribute("y1", y1);
+      line.setAttribute("x2", x); line.setAttribute("y2", y2);
+      line.setAttribute("stroke", "var(--complete)");
+      line.setAttribute("stroke-width", 3);
+      line.setAttribute("stroke-linecap", "round");
+      wrap.appendChild(line);
+
+      const len = Math.abs(y2 - y1) || 1;
+      if (!reduceMotion) {
+        line.style.strokeDasharray = String(len);
+        line.style.strokeDashoffset = String(len);
+        line.style.transition = "stroke-dashoffset 0.5s ease";
+        requestAnimationFrame(() => requestAnimationFrame(() => { line.style.strokeDashoffset = "0"; }));
+      }
+
+      const endDot = document.createElementNS(NS, "circle");
+      endDot.setAttribute("cx", x); endDot.setAttribute("cy", y2); endDot.setAttribute("r", 4);
+      endDot.setAttribute("fill", "var(--complete)");
+      if (!reduceMotion) {
+        endDot.style.opacity = "0";
+        endDot.style.transition = "opacity 0.2s ease 0.45s";
+        requestAnimationFrame(() => requestAnimationFrame(() => { endDot.style.opacity = "1"; }));
+      }
+      wrap.appendChild(endDot);
+
+      if (play.is_touchdown) {
+        const star = document.createElementNS(NS, "polygon");
+        star.setAttribute("points", starPoints(x, y2, 8, 3.4));
+        star.setAttribute("fill", "var(--touchdown)");
+        star.setAttribute("stroke", "var(--touchdown-outline)");
+        star.setAttribute("stroke-width", "0.75");
+        star.setAttribute("stroke-linejoin", "round");
+        if (!reduceMotion) {
+          star.setAttribute("transform-origin", x + "px " + y2 + "px");
+          star.style.transform = "scale(0) rotate(-40deg)";
+          star.style.opacity = "0";
+          star.style.transition = "transform 0.35s cubic-bezier(.34,1.56,.64,1) 0.55s, opacity 0.2s ease 0.55s";
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            star.style.transform = "scale(1) rotate(0deg)";
+            star.style.opacity = "1";
+          }));
+        }
+        wrap.appendChild(star);
+      }
+
+      const startDot = document.createElementNS(NS, "circle");
+      startDot.setAttribute("cx", x); startDot.setAttribute("cy", y1); startDot.setAttribute("r", 2.5);
+      startDot.setAttribute("fill", "var(--complete)");
+      startDot.setAttribute("opacity", "0.7");
+      wrap.appendChild(startDot);
+
+      if (play.receiver) {
+        const label = document.createElementNS(NS, "text");
+        label.setAttribute("x", x + 8);
+        label.setAttribute("y", y2 + 3);
+        label.setAttribute("font-size", "8");
+        label.setAttribute("font-weight", "600");
+        label.setAttribute("fill", "var(--field-line)");
+        label.textContent = play.receiver.split(" ").pop();
+        if (!reduceMotion) {
+          label.style.opacity = "0";
+          label.style.transition = "opacity 0.2s ease 0.5s";
+          requestAnimationFrame(() => requestAnimationFrame(() => { label.style.opacity = "1"; }));
+        }
+        wrap.appendChild(label);
+      }
+    } else if (play.outcome === "incomplete") {
+      const dot = document.createElementNS(NS, "circle");
+      dot.setAttribute("cx", x); dot.setAttribute("cy", y1); dot.setAttribute("r", 5);
+      dot.setAttribute("fill", "var(--incomplete)");
+      if (!reduceMotion) {
+        dot.setAttribute("transform-origin", x + "px " + y1 + "px");
+        dot.style.transform = "scale(0)";
+        dot.style.transition = "transform 0.25s cubic-bezier(.34,1.56,.64,1)";
+        requestAnimationFrame(() => requestAnimationFrame(() => { dot.style.transform = "scale(1)"; }));
+      }
+      wrap.appendChild(dot);
+    } else {
+      const size = 8;
+      const rect = document.createElementNS(NS, "rect");
+      rect.setAttribute("x", x - size / 2); rect.setAttribute("y", y1 - size / 2);
+      rect.setAttribute("width", size); rect.setAttribute("height", size);
+      rect.setAttribute("fill", "var(--intercept)");
+      rect.setAttribute("transform", "rotate(45 " + x + " " + y1 + ")");
+      if (!reduceMotion) {
+        rect.setAttribute("transform-origin", x + "px " + y1 + "px");
+        rect.style.transform = "rotate(45deg) scale(0)";
+        rect.style.transition = "transform 0.25s cubic-bezier(.34,1.56,.64,1)";
+        requestAnimationFrame(() => requestAnimationFrame(() => { rect.style.transform = "rotate(45deg) scale(1)"; }));
+      }
+      wrap.appendChild(rect);
+    }
+
+    wrap.addEventListener("mouseenter", (e) => showTooltip(e, play));
+    wrap.addEventListener("mousemove", positionTooltip);
+    wrap.addEventListener("mouseleave", hideTooltip);
+    wrap.addEventListener("focus", (e) => showTooltip(e, play));
+    wrap.addEventListener("blur", hideTooltip);
+
+    layer.appendChild(wrap);
+  }
+
+  function groupOverlaps(plays) {
+    const groups = {};
+    plays.forEach((p) => {
+      const key = p.down + "|" + p.start_pos;
+      (groups[key] = groups[key] || []).push(p);
+    });
+    return plays.map((p) => groups[p.down + "|" + p.start_pos]);
+  }
+
+  const INTERVAL = 420;
+
+  function playGame(index) {
+    pendingTimeouts.forEach(clearTimeout);
+    pendingTimeouts = [];
+
+    const game = games[index];
+    const plays = PLAYS.filter((p) => p.week === game.week && p.opponent === game.opponent);
+    const groups = groupOverlaps(plays);
+
+    buildField();
+    renderSummary(plays);
+    document.getElementById("fieldCaption").textContent = "Week " + game.week + " vs. " + game.opponent;
+
+    const replayBtn = document.getElementById("replayBtn");
+    replayBtn.disabled = true;
+
+    if (reduceMotion) {
+      plays.forEach((p, i) => drawPlay(p, groups[i].indexOf(p), groups[i]));
+      replayBtn.disabled = false;
+      return;
+    }
+
+    plays.forEach((p, i) => {
+      const t = setTimeout(() => {
+        drawPlay(p, groups[i].indexOf(p), groups[i]);
+        if (i === plays.length - 1) replayBtn.disabled = false;
+      }, i * INTERVAL);
+      pendingTimeouts.push(t);
+    });
+  }
+
+  select.addEventListener("change", () => playGame(Number(select.value)));
+  document.getElementById("replayBtn").addEventListener("click", () => playGame(Number(select.value)));
+
+  buildField();
+  playGame(0);
+</script>
