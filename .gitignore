@@ -9,3 +9,4 @@ src/viz/output/
 *.parquet
 .ipynb_checkpoints/
 .DS_Store
+game_film/
