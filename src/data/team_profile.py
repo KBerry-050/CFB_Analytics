@@ -242,6 +242,35 @@ def get_team_ratings(team: str, year: int) -> pd.DataFrame:
     return cached_dataframe(f"ratings_{_slug(team)}_{year}", fetch)
 
 
+def get_all_teams_sp_ratings(year: int) -> pd.DataFrame:
+    """SP+ ratings for every team CFBD rates that season, unfiltered. The
+    team-filtered `get_sp(year=year, team=team)` call CFBD uses under
+    `get_team_ratings` returns a `ranking` field scoped to just that one row
+    (always 1) rather than the true national rank — fetch the full list and
+    slice locally instead whenever the actual rank matters. One API call,
+    cached once per year."""
+
+    def fetch() -> pd.DataFrame:
+        with get_client() as client:
+            ratings = cfbd.RatingsApi(client).get_sp(year=year)
+        return _records_to_df(ratings)
+
+    return cached_dataframe(f"sp_ratings_{year}", fetch)
+
+
+def get_all_teams_fpi_ratings(year: int) -> pd.DataFrame:
+    """FPI ratings (and resume ranks) for every team, unfiltered — same
+    rank-scoping caveat as `get_all_teams_sp_ratings`. One API call, cached
+    once per year."""
+
+    def fetch() -> pd.DataFrame:
+        with get_client() as client:
+            ratings = cfbd.RatingsApi(client).get_fpi(year=year)
+        return _records_to_df(ratings)
+
+    return cached_dataframe(f"fpi_ratings_{year}", fetch)
+
+
 # --- betting -------------------------------------------------------------
 
 
