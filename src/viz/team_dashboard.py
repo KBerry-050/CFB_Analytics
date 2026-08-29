@@ -9,6 +9,7 @@ from src.data.team_profile import (
     get_team_ratings,
     get_team_recruiting_ranking,
     get_team_records,
+    get_team_roster,
     get_team_schedule,
     get_team_talent,
 )
@@ -222,6 +223,136 @@ def team_game_log_table(team: str, year: int) -> GT:
         "win_prob",
     )
     return gt
+
+
+_POSITION_GROUP_ORDER = {
+    pos: i
+    for i, pos in enumerate(["QB", "RB", "WR", "TE", "OL", "DL", "LB", "CB", "S", "LS", "P", "PK"])
+}
+_CLASS_YEAR_LABEL = {1: "Fr", 2: "So", 3: "Jr", 4: "Sr", 5: "5th"}
+
+
+def team_roster_table(team: str, year: int) -> GT:
+    """One row per player: jersey, position, name, class, height/weight, hometown."""
+    roster = get_team_roster(team, year).copy()
+    roster["position_order"] = roster["position"].map(_POSITION_GROUP_ORDER).fillna(99)
+    roster = roster.sort_values(["position_order", "jersey"], na_position="last").reset_index(drop=True)
+
+    df = pd.DataFrame(
+        {
+            "jersey": roster["jersey"],
+            "name": roster["firstName"] + " " + roster["lastName"],
+            "position": roster["position"],
+            "class_year": roster["year"].map(_CLASS_YEAR_LABEL).fillna(roster["year"].astype("Int64").astype(str)),
+            "height": roster["height"].apply(lambda h: f"{int(h) // 12}'{int(h) % 12}\"" if pd.notna(h) else None),
+            "weight": roster["weight"],
+            "hometown": roster["homeCity"].fillna("") + ", " + roster["homeState"].fillna(""),
+        }
+    )
+
+    gt = (
+        GT(df)
+        .tab_header(title=team_header_title(f"{team} — {year} Roster", _team_logo_url(team, year)))
+        .fmt_integer(columns=["jersey", "weight"])
+        .cols_label(
+            jersey=html("#"),
+            name=html("Name"),
+            position=html("Pos"),
+            class_year=html("Yr"),
+            height=html("Ht"),
+            weight=html("Wt"),
+            hometown=html("Hometown"),
+        )
+        .cols_align(align="center", columns=["jersey", "position", "class_year", "height", "weight"])
+        .cols_width(
+            {
+                "jersey": NARROW_COL_WIDTH,
+                "name": "170px",
+                "position": NARROW_COL_WIDTH,
+                "class_year": NARROW_COL_WIDTH,
+                "height": NARROW_COL_WIDTH,
+                "weight": NARROW_COL_WIDTH,
+                "hometown": "180px",
+            }
+        )
+    )
+    return base_table(gt)
+
+
+def team_schedule_table(team: str, year: int) -> GT:
+    """One row per scheduled game: week, date/time, opponent, location, venue.
+    Unlike `team_game_log_table`, this doesn't depend on results or advanced
+    stats, so it works for a season that hasn't been played yet."""
+    schedule = get_team_schedule(team, year)
+    teams = get_teams(year)[["school", "logo", "color"]].rename(columns={"school": "opponent"})
+
+    is_home = schedule["homeTeam"] == team
+    dates = schedule["startDate"].dt.tz_convert("US/Eastern")
+    df = pd.DataFrame(
+        {
+            "week": schedule["week"],
+            "date": dates.dt.strftime("%b %-d"),
+            "time": (dates.dt.strftime("%-I:%M %p ET")).where(~schedule["startTimeTBD"], "TBD"),
+            "opponent": schedule["awayTeam"].where(is_home, schedule["homeTeam"]),
+            "location": schedule["neutralSite"].map({True: "Neutral"}).fillna(is_home.map({True: "Home", False: "Away"})),
+            "venue": schedule["venue"],
+        }
+    ).sort_values("week")
+
+    df = df.merge(teams, on="opponent", how="left")
+    df["color"] = df["color"].fillna("#333333")
+    df = df.reset_index(drop=True)
+
+    gt = (
+        GT(
+            df[["week", "date", "time", "logo", "opponent", "location", "venue"]],
+            rowname_col="week",
+        )
+        .tab_header(title=team_header_title(f"{team} — {year} Schedule", _team_logo_url(team, year)))
+        .fmt_image(columns="logo")
+        .cols_label(
+            date=html("Date"),
+            time=html("Time"),
+            logo=html(""),
+            opponent=html("Opponent"),
+            location=html("Location"),
+            venue=html("Venue"),
+        )
+        .cols_align(align="center", columns=["date", "time", "location"])
+        .cols_width(
+            {
+                "date": NARROW_COL_WIDTH,
+                "time": "115px",
+                "logo": "50px",
+                "opponent": "150px",
+                "location": "85px",
+                "venue": "200px",
+            }
+        )
+    )
+    gt = base_table(gt)
+    gt = style_team_text_by_color(gt, df["color"].tolist(), "opponent")
+    return gt
+
+
+def write_team_preview(team: str, year: int, out_path: str) -> str:
+    """Combine the roster and schedule tables into a single standalone HTML
+    page — the pre-season counterpart to `write_team_dashboard` for a year
+    that hasn't been (fully) played yet, so no results/advanced stats exist."""
+    html_body = combine_gt_tables(team_schedule_table(team, year), team_roster_table(team, year))
+
+    import os
+
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    with open(out_path, "w") as f:
+        f.write(html_body)
+    return out_path
+
+
+def render_team_preview_png(team: str, year: int, out_path: str) -> str:
+    """Same content as `write_team_preview`, rendered to a cropped PNG."""
+    html_body = combine_gt_tables(team_schedule_table(team, year), team_roster_table(team, year))
+    return str(render_html_to_png(html_body, out_path))
 
 
 def write_team_dashboard(team: str, year: int, out_path: str) -> str:
