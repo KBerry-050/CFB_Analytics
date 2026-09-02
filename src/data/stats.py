@@ -59,3 +59,58 @@ def get_offense_season_stats(year: int) -> pd.DataFrame:
         return totals_df.merge(advanced_df, on="team", how="inner")
 
     return cached_dataframe(f"offense_season_stats_{year}", fetch)
+
+
+def get_qb_season_efficiency(year: int, min_plays: int = 100) -> pd.DataFrame:
+    """Season-level passing efficiency for every FBS QB with at least
+    `min_plays` recorded plays that season: completion %, yards/attempt,
+    PPA/play (overall and passing-specific), and counting stats — for
+    scatter/leaderboard use across the whole league in one call.
+    """
+
+    def fetch() -> pd.DataFrame:
+        with get_client() as client:
+            ppa = cfbd.MetricsApi(client).get_predicted_points_added_by_player_season(
+                year=year, position="QB", threshold=min_plays
+            )
+            passing = cfbd.StatsApi(client).get_player_season_stats(year=year, category="passing")
+
+        ppa_df = pd.DataFrame(
+            [
+                {
+                    "player_id": p.id,
+                    "player": p.name,
+                    "team": p.team,
+                    "conference": p.conference,
+                    "ppa_per_play": p.average_ppa.all,
+                    "passing_ppa_per_play": p.average_ppa.var_pass,
+                    "total_ppa": p.total_ppa.all,
+                }
+                for p in ppa
+            ]
+        )
+
+        passing_df = (
+            pd.DataFrame([{"player_id": s.player_id, "stat_type": s.stat_type, "stat": s.stat} for s in passing])
+            .pivot_table(index="player_id", columns="stat_type", values="stat", aggfunc="first")
+            .reset_index()
+            .rename(
+                columns={
+                    "ATT": "attempts",
+                    "COMPLETIONS": "completions",
+                    "PCT": "completion_pct",
+                    "YPA": "yards_per_attempt",
+                    "YDS": "yards",
+                    "TD": "tds",
+                    "INT": "interceptions",
+                }
+            )
+        )
+        stat_cols = ["attempts", "completions", "completion_pct", "yards_per_attempt", "yards", "tds", "interceptions"]
+        for col in stat_cols:
+            if col in passing_df.columns:
+                passing_df[col] = pd.to_numeric(passing_df[col], errors="coerce")
+
+        return ppa_df.merge(passing_df, on="player_id", how="inner")
+
+    return cached_dataframe(f"qb_season_efficiency_{year}_min{min_plays}", fetch)
