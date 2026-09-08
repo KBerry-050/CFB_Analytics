@@ -31,6 +31,41 @@ def get_games(year: int, week: int | None = None, season_type: str = "regular") 
     return cached_dataframe(cache_key, fetch)
 
 
+def get_week_betting_lines(year: int, week: int, season_type: str = "regular") -> pd.DataFrame:
+    """Consensus closing spread and over/under for every game in a week.
+
+    The spread is the median across books rather than any one provider's
+    number, so a single outlier doesn't define the line. It stays
+    home-relative, which is how CFBD reports it: negative means the home team
+    was favored, so the home team's expected margin is `-spread`.
+
+    Columns: id, home_team, away_team, spread, over_under, books.
+    """
+
+    def fetch() -> pd.DataFrame:
+        with get_client() as client:
+            games = cfbd.BettingApi(client).get_lines(
+                year=year, week=week, season_type=season_type
+            )
+        rows = []
+        for game in games:
+            spreads = [line.spread for line in game.lines if line.spread is not None]
+            totals = [line.over_under for line in game.lines if line.over_under is not None]
+            rows.append(
+                {
+                    "id": game.id,
+                    "home_team": game.home_team,
+                    "away_team": game.away_team,
+                    "spread": float(pd.Series(spreads).median()) if spreads else None,
+                    "over_under": float(pd.Series(totals).median()) if totals else None,
+                    "books": len(spreads),
+                }
+            )
+        return pd.DataFrame(rows)
+
+    return cached_dataframe(f"betting_lines_{year}_{season_type}_wk{week}", fetch)
+
+
 def current_week(year: int) -> tuple[int, str]:
     """Return the (week, season_type) whose date range contains today, or the
     most recently started one if today is past the whole season.

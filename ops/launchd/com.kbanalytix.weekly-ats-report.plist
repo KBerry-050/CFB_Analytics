@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.kbanalytix.weekly-ats-report</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>cd /Users/kyleberry/projects/CFB_Analytics && source .venv/bin/activate && python -m src.app.weekly_ats_report</string>
+    </array>
+
+    <!-- Weekday 1 = Monday (0/7 = Sunday, per launchd's convention). -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <!-- If the Mac is asleep/off at 9am Monday, launchd runs it once it's
+         next awake rather than dropping the run entirely. -->
+    <key>StandardOutPath</key>
+    <string>/Users/kyleberry/projects/CFB_Analytics/src/data/output/weekly_ats_report.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/kyleberry/projects/CFB_Analytics/src/data/output/weekly_ats_report.err.log</string>
+</dict>
+</plist>

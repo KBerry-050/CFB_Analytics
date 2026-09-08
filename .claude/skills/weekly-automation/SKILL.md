@@ -67,3 +67,30 @@ Drive.
   explicit `--force` flag.
 - Scheduling (cron/launchd/etc.) is not yet set up — when it is, document the
   actual schedule and invocation command here.
+
+## Weekly ATS report (installed, scheduled)
+
+A narrower, already-scheduled instance of this same pattern — separate from
+`weekly_report.py` above, which is still just the planned umbrella pipeline.
+`src/app/weekly_ats_report.py` emails the two `src/viz/ats_vs_ap_rank.py`
+charts (AP-rank order, and performance-ranked with no x axis) for whatever
+week `current_week()` (`src/data/games.py`) resolves to as "current" —
+whichever week's date range contains today, which by Monday morning means the
+weekend just played.
+
+- Manual run: `python -m src.app.weekly_ats_report` (`--force` to resend a
+  week already marked sent; `--year` to override the season).
+- Idempotent per chart via a JSON marker at
+  `src/data/output/ats_report_last_sent.json` (gitignored — it's run-state,
+  not data) — updated after each chart actually sends, so if one chart's data
+  isn't ready yet (a `ValueError`/`RuntimeError` from `build_ats_vs_rank_data`,
+  logged and skipped rather than raised) or a send fails, the next run
+  retries only what's still missing rather than resending everything.
+- Scheduled via macOS launchd, Mondays at 9am: `ops/launchd/com.kbanalytix.weekly-ats-report.plist`
+  (tracked in-repo; installed copy lives at
+  `~/Library/LaunchAgents/com.kbanalytix.weekly-ats-report.plist`, outside
+  the repo since that's where launchd requires it). Logs to
+  `src/data/output/weekly_ats_report{,.err}.log`. To change the schedule,
+  edit both copies (or re-copy the repo one over the installed one) and
+  `launchctl unload`/`load` the installed path. To stop it entirely:
+  `launchctl unload ~/Library/LaunchAgents/com.kbanalytix.weekly-ats-report.plist`.
