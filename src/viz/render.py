@@ -24,6 +24,17 @@ def _find_chrome() -> str:
     )
 
 
+def render_template(template_path: str | Path, replacements: dict[str, str]) -> str:
+    """Load an HTML template and substitute each `{placeholder: value}` pair
+    via plain string replace — the house pattern for standalone interactive
+    HTML output (no PNG/email path), used instead of a templating dependency
+    since these pages are just one placeholder swap each."""
+    html = Path(template_path).read_text()
+    for placeholder, value in replacements.items():
+        html = html.replace(placeholder, value)
+    return html
+
+
 def combine_gt_tables(*tables: GT, gap_px: int = 32) -> str:
     """Stack GT tables into one standalone HTML page for combined
     export/rendering. Sized to content (never a fixed max-width narrower than

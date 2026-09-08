@@ -1,0 +1,458 @@
+<title>__GAME_LABEL__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #10131a;
+    --surface: #171c26;
+    --surface-2: #1d2330;
+    --border: #2a3040;
+    --text: #eceef3;
+    --text-muted: #8b93a6;
+    --text-faint: #5b6478;
+    --accent: #3fc6d6;
+    --accent-soft: rgba(63, 198, 214, 0.14);
+    --good: #5fbf77;
+    --good-soft: rgba(95, 191, 119, 0.14);
+    --warn: #e3a93e;
+    --warn-soft: rgba(227, 169, 62, 0.14);
+    --critical: #e1543f;
+    --critical-soft: rgba(225, 84, 63, 0.14);
+    --unmatched: #6b7688;
+    --unmatched-soft: rgba(107, 118, 136, 0.14);
+
+    --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    --font-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.5;
+  }
+
+  a { color: var(--accent); }
+
+  .wrap {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 24px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 0.98;
+    letter-spacing: 0.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .stat-tiles {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .stat-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 16px;
+    min-width: 108px;
+  }
+
+  .stat-tile .n {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 22px;
+    font-weight: 600;
+  }
+
+  .stat-tile .label {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .stat-tile.needs-review .n { color: var(--warn); }
+
+  .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .segmented {
+    display: inline-flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .segmented button {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+    padding: 7px 14px;
+    cursor: pointer;
+  }
+
+  .segmented button.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .segmented button:focus-visible,
+  .card-frames button:focus-visible,
+  .lightbox-close:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .filter-hint {
+    font-size: 13px;
+    color: var(--text-faint);
+  }
+
+  .cache-warning {
+    display: none;
+    background: var(--warn-soft);
+    color: var(--warn);
+    border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 20px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card[hidden] { display: none; }
+
+  .card[data-severity="warn"] { border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); }
+  .card[data-severity="critical"] { border-color: color-mix(in srgb, var(--critical) 55%, var(--border)); }
+  .card[data-severity="unmatched"] { border-style: dashed; }
+
+  .gap-pill {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    padding: 4px 10px;
+    border-radius: 999px;
+    backdrop-filter: blur(2px);
+  }
+
+  .gap-pill.good { background: var(--good-soft); color: var(--good); }
+  .gap-pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .gap-pill.critical { background: var(--critical-soft); color: var(--critical); }
+  .gap-pill.unmatched { background: var(--unmatched-soft); color: var(--unmatched); }
+
+  .card-frames {
+    display: flex;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .card-frames button {
+    flex: 1;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: zoom-in;
+    display: block;
+    position: relative;
+  }
+
+  .card-frames img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .card-frames .frame-label {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text);
+    background: rgba(16, 19, 26, 0.72);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  .card-body {
+    padding: 14px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .scoreboard-strip {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+
+  .scoreboard-strip .clock { color: var(--text); font-weight: 600; }
+
+  .down-distance {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 2px 7px;
+    border-radius: 4px;
+    align-self: flex-start;
+  }
+
+  .play-label {
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 9, 13, 0.92);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    z-index: 10;
+  }
+
+  .lightbox.open { display: flex; }
+
+  .lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lightbox img { animation: pop 140ms ease-out; }
+  }
+
+  @keyframes pop {
+    from { transform: scale(0.97); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .empty-state {
+    color: var(--text-faint);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    padding: 40px 0;
+    display: none;
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <p class="eyebrow">Game Film Sync Review</p>
+      <h1 id="game-title">__GAME_LABEL__</h1>
+    </div>
+    <div class="stat-tiles" id="stat-tiles"></div>
+  </header>
+
+  <p class="cache-warning" id="cache-warning">
+    This frame cache has no recorded fps/start_seconds (it predates that check). Frame↔timestamp
+    alignment is unverified — confirm the fps passed to this tool matches how the cache was extracted.
+  </p>
+
+  <div class="filter-row">
+    <div class="segmented" id="filter-buttons" role="group" aria-label="Filter by review status">
+      <button type="button" data-filter="all" class="active">All</button>
+      <button type="button" data-filter="review">Needs review</button>
+    </div>
+    <span class="filter-hint">Click a frame to zoom in on the clock.</span>
+  </div>
+
+  <div class="grid" id="card-grid"></div>
+  <p class="empty-state" id="empty-state">Nothing matches this filter.</p>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <button type="button" class="lightbox-close" id="lightbox-close">Close</button>
+  <img id="lightbox-img" src="" alt="Zoomed video frame">
+</div>
+
+<script id="review-data" type="application/json">__REVIEW_DATA_JSON__</script>
+<script>
+  (function () {
+    const data = JSON.parse(document.getElementById("review-data").textContent);
+    const { summary, cards } = data;
+
+    if (!summary.cacheVerified) {
+      document.getElementById("cache-warning").style.display = "block";
+    }
+
+    const severityLabel = { good: "on target", warn: "worth a glance", critical: "needs review", unmatched: "no match" };
+
+    const tiles = document.getElementById("stat-tiles");
+    tiles.innerHTML = [
+      { n: summary.total, label: "plays matched" },
+      { n: summary.avgGap === null ? "—" : summary.avgGap + "s", label: "avg gap" },
+      { n: summary.needsReview, label: "needs review", cls: summary.needsReview > 0 ? "needs-review" : "" },
+    ].map(t => `<div class="stat-tile ${t.cls || ""}"><div class="n">${t.n}</div><div class="label">${t.label}</div></div>`).join("");
+
+    const grid = document.getElementById("card-grid");
+    const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+    grid.innerHTML = cards.map((c, i) => {
+      const frames = c.frames.map((f, fi) => `
+        <button type="button" data-card="${i}" data-frame="${fi}" aria-label="Zoom ${escapeHtml(f.label)} frame">
+          <img src="${f.src}" alt="${escapeHtml(f.label)} at ${f.seconds}s" loading="lazy">
+          <span class="frame-label">${escapeHtml(f.label)}</span>
+        </button>`).join("");
+
+      const range = c.videoEnd ? `${c.videoStart}–${c.videoEnd}` : c.videoStart;
+      const downDistance = c.downDistance ? `<span class="down-distance">${escapeHtml(c.downDistance)}</span>` : "";
+
+      return `
+        <article class="card" data-severity="${c.severity}">
+          <span class="gap-pill ${c.severity}" title="${severityLabel[c.severity]}">${escapeHtml(c.gapLabel)}</span>
+          <div class="card-frames">${frames}</div>
+          <div class="card-body">
+            <div class="scoreboard-strip"><span>${c.quarter}</span><span class="clock">${c.clock}</span></div>
+            ${downDistance}
+            <div class="play-label">${escapeHtml(c.playLabel)}</div>
+            <div class="meta-row">
+              <span>${range} · ${c.nReadings} reading${c.nReadings === 1 ? "" : "s"}</span>
+              <span>${c.playId ? "#" + escapeHtml(c.playId) : ""}</span>
+            </div>
+          </div>
+        </article>`;
+    }).join("");
+
+    const emptyState = document.getElementById("empty-state");
+    function applyFilter(filter) {
+      let visible = 0;
+      grid.querySelectorAll(".card").forEach((card, i) => {
+        const show = filter === "all" || cards[i].severity === "warn" || cards[i].severity === "critical" || cards[i].severity === "unmatched";
+        card.hidden = filter === "review" ? !show : false;
+        if (!card.hidden) visible++;
+      });
+      emptyState.style.display = visible === 0 ? "block" : "none";
+    }
+
+    document.getElementById("filter-buttons").addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-filter]");
+      if (!btn) return;
+      document.querySelectorAll("#filter-buttons button").forEach((b) => b.classList.toggle("active", b === btn));
+      applyFilter(btn.dataset.filter);
+    });
+
+    const lightbox = document.getElementById("lightbox");
+    const lightboxImg = document.getElementById("lightbox-img");
+    function openLightbox(src, alt) {
+      lightboxImg.src = src;
+      lightboxImg.alt = alt;
+      lightbox.classList.add("open");
+    }
+    function closeLightbox() {
+      lightbox.classList.remove("open");
+      lightboxImg.src = "";
+    }
+    grid.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-card]");
+      if (!btn) return;
+      const card = cards[Number(btn.dataset.card)];
+      const frame = card.frames[Number(btn.dataset.frame)];
+      openLightbox(frame.src, `${frame.label} — ${card.quarter} ${card.clock}`);
+    });
+    document.getElementById("lightbox-close").addEventListener("click", closeLightbox);
+    lightbox.addEventListener("click", (e) => { if (e.target === lightbox) closeLightbox(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
+  })();
+</script>

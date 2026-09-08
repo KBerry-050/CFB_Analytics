@@ -37,6 +37,30 @@ App code doesn't build tables/charts directly — it calls into `src/viz`.
 
 `notebooks/` is for exploratory analysis only, not production pipeline code.
 
+### Game film sync
+
+`src/data/game_film.py` and `src/data/scoreboard_ocr.py` connect local game
+film to CFBD play-by-play data: given a video timestamp, find the matching
+play. Film lives in the gitignored `game_film/{team}_{year}/wk{week}_{opponent}/`
+directory (large binaries, never committed) alongside a tracked
+`game_film/sync_anchors.csv`. Two sync paths:
+
+- Manual — mark a few known video-timestamp/game-clock pairs per video in
+  `sync_anchors.csv`; `estimate_game_clock()` interpolates between them.
+- Automatic — `scoreboard_ocr.py` OCRs the broadcast's on-screen clock via
+  Apple's Vision framework (`build_video_play_sync()`), so no manual anchors
+  are needed for film with a readable overlay. This path is macOS-only
+  (`pyobjc-framework-Vision`/`Quartz` in `requirements.txt`).
+
+`src/viz/game_film_review.py` renders a sync's output (a `build_video_play_sync`
+DataFrame) into a standalone HTML page pairing each matched play window with
+its source video frame(s), for visually QA'ing the OCR/match before trusting
+it — `python -m src.viz.game_film_review --play-sync-csv ... --frame-cache-dir
+... --fps ...`.
+
+Not yet built: anything player-tracking/CV related — this only maps a video
+timestamp to a play, not what happened in the frame.
+
 ## Secrets
 
 `CFBD_API_KEY` and SMTP credentials are read from environment variables via

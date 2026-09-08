@@ -18,6 +18,7 @@ from pathlib import Path
 import pandas as pd
 
 from src.data.team_profile import get_qb_pass_chart_data
+from src.viz.render import render_template
 
 TEMPLATE_PATH = Path(__file__).parent / "qb_pass_chart_template.html"
 
@@ -28,12 +29,14 @@ def build_qb_pass_chart_html(player_name: str, team: str, year: int) -> str:
     df = get_qb_pass_chart_data(player_name, team, year)
     plays = df.where(pd.notnull(df), None).to_dict(orient="records")
 
-    template = TEMPLATE_PATH.read_text()
-    return (
-        template.replace("{{PLAYER}}", player_name)
-        .replace("{{TEAM}}", team)
-        .replace("{{YEAR}}", str(year))
-        .replace("{{DATA}}", json.dumps(plays))
+    return render_template(
+        TEMPLATE_PATH,
+        {
+            "{{PLAYER}}": player_name,
+            "{{TEAM}}": team,
+            "{{YEAR}}": str(year),
+            "{{DATA}}": json.dumps(plays),
+        },
     )
 
 
