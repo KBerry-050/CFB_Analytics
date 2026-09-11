@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{TITLE}}</title>
+<style>
+  :root {
+    --away: {{AWAY_COLOR}};
+    --home: {{HOME_COLOR}};
+    --bg: #0a0c10;
+    --panel: #12151b;
+    --rule: #232833;
+    --ink: #f4f6fa;
+    --ink-dim: #c3cbd9;
+    --ink-faint: #97a1b3;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #ffffff;
+    font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 26px;
+  }
+  .card {
+    width: 1480px;
+    margin: 0 auto;
+    background: var(--bg);
+    color: var(--ink);
+    overflow: hidden;
+    border-radius: 6px;
+  }
+  .num { font-family: "DIN Condensed", "Avenir Next Condensed", Impact, sans-serif; font-weight: bold; }
+  .eyebrow {
+    font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-dim); font-weight: 700;
+  }
+  section { padding: 26px 44px; border-top: 1px solid var(--rule); }
+  section > .eyebrow { margin-bottom: 18px; }
+
+  /* ---------- hero ---------- */
+  .hero {
+    position: relative; border-top: none; padding: 34px 44px 0;
+    background:
+      radial-gradient(760px 300px at 0% 12%, color-mix(in srgb, var(--away) 34%, transparent), transparent 68%),
+      radial-gradient(760px 300px at 100% 12%, color-mix(in srgb, var(--home) 34%, transparent), transparent 68%);
+  }
+  .hero-grid {
+    display: grid; grid-template-columns: 250px 150px 1fr 150px 250px;
+    align-items: center; gap: 10px;
+  }
+  .team { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .team img { height: 96px; width: 96px; object-fit: contain; }
+  .team .school { font-size: 30px; font-weight: 700; letter-spacing: 0.03em; }
+  .team .sub { font-size: 12.5px; letter-spacing: 0.09em; color: var(--ink-dim); text-transform: uppercase; }
+  .rank {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.1em;
+    padding: 2px 8px; border-radius: 3px; background: #ffffff; color: #0a0c10;
+  }
+  .score { font-size: 108px; line-height: 0.86; text-align: center; }
+  .score.lost { color: var(--ink-dim); }
+  .center { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .final {
+    font-size: 13px; letter-spacing: 0.26em; font-weight: 700;
+    border: 1px solid #39414f; border-radius: 3px; padding: 5px 16px; color: var(--ink);
+  }
+  .center .where { font-size: 15px; color: var(--ink); font-weight: 600; }
+  .center .cond { font-size: 14px; color: var(--ink-dim); }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .pill {
+    font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase;
+    border: 1px solid #39414f; border-radius: 999px; padding: 4px 12px; color: var(--ink-dim);
+  }
+  .pill b { color: var(--ink); font-weight: 700; }
+  .pill.flag { border-color: #d9a441; color: #f0c675; }
+  .linescore { display: flex; justify-content: center; padding: 22px 0 26px; }
+  .linescore table { border-collapse: collapse; }
+  .linescore th, .linescore td { padding: 5px 20px; text-align: center; font-size: 15px; }
+  .linescore th { font-size: 12px; letter-spacing: 0.1em; color: var(--ink-dim); font-weight: 700; }
+  .linescore td.team-cell { text-align: left; font-weight: 700; letter-spacing: 0.05em; padding-left: 0; }
+  .linescore td.q { font-size: 21px; color: var(--ink-dim); }
+  .linescore td.tot { font-size: 23px; color: var(--ink); }
+  .linescore tr + tr td { border-top: 1px solid var(--rule); }
+  .linescore .swatch { display: inline-block; width: 4px; height: 15px; margin-right: 9px; vertical-align: -2px; }
+
+  /* ---------- duel bars ---------- */
+  .duel { display: grid; grid-template-columns: 1fr 1fr; gap: 0 54px; }
+  .duel-col > .eyebrow { margin-bottom: 14px; }
+  .duel-row {
+    display: grid; grid-template-columns: 66px 1fr 138px 1fr 66px;
+    align-items: center; gap: 9px; height: 31px;
+  }
+  .duel-row .dv { font-size: 20px; }
+  .duel-row .dv.l { text-align: right; }
+  .duel-row .dv.r { text-align: left; }
+  .duel-row .dv.dim { color: var(--ink-faint); }
+  .duel-row .lab {
+    font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase;
+    text-align: center; color: var(--ink-dim); font-weight: 600;
+  }
+  .track { height: 11px; display: flex; }
+  .track.l { justify-content: flex-end; }
+  .track i { display: block; height: 100%; border-radius: 1px; }
+  .track.l i { background: var(--away); }
+  .track.r i { background: var(--home); }
+  .track i.neg { background: transparent; border: 1px solid currentColor; }
+  .track.l i.neg { color: var(--away); }
+  .track.r i.neg { color: var(--home); }
+  .track i.lose { opacity: 0.62; }
+
+  /* ---------- momentum ---------- */
+  .momentum { display: flex; justify-content: space-between; align-items: flex-start; gap: 40px; }
+
+  /* ---------- players ---------- */
+  .players { display: grid; grid-template-columns: 1fr 1fr; gap: 0 54px; }
+  .pcol h4 { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .pcol h4 img { height: 26px; width: 26px; object-fit: contain; }
+  .pcol h4 span { font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; }
+  .prow { display: grid; grid-template-columns: 42px 1fr 118px; gap: 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--rule); }
+  .prow .pos {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-align: center;
+    border: 1px solid #39414f; border-radius: 3px; padding: 3px 0; color: var(--ink-dim);
+  }
+  .prow .name { font-size: 15px; font-weight: 600; }
+  .prow .line { font-size: 12.5px; color: var(--ink-faint); letter-spacing: 0.01em; margin-top: 2px; }
+  .prow .impact { text-align: right; }
+  .prow .impact .v { font-size: 19px; }
+  .prow .impact .u { font-size: 11px; letter-spacing: 0.05em; color: var(--ink-faint); text-transform: uppercase; }
+  .pbar { height: 5px; margin-top: 5px; background: #1b1f27; border-radius: 3px; overflow: hidden; }
+  .pbar i { display: block; height: 100%; }
+
+  /* ---------- footer ---------- */
+  .foot { border-top: 1px solid var(--rule); padding: 18px 44px 22px; display: flex; justify-content: space-between; gap: 30px; }
+  .foot .gloss { font-size: 11.5px; line-height: 1.75; color: var(--ink-faint); max-width: 1010px; }
+  .foot .sig { font-size: 11.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); text-align: right; white-space: nowrap; }
+  svg text { font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  svg text.num { font-family: "DIN Condensed", "Avenir Next Condensed", Impact, sans-serif; }
+</style>
+</head>
+<body>
+<div class="card">
+  {{HERO}}
+  {{WINPROB}}
+  {{DUEL}}
+  {{MOMENTUM}}
+  {{PLAYERS}}
+  {{FOOTER}}
+</div>
+</body>
+</html>

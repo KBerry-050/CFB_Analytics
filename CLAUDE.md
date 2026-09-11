@@ -49,6 +49,35 @@ data itself; searching a team not yet cached hits the live CFBD API and
 caches it via the normal `cached_dataframe` path (`src/data/cache.py`), so
 repeat lookups are instant.
 
+### Post-game report
+
+`src/data/postgame.py` + `src/viz/postgame_report.py` build a single-page
+"broadcast card" summarizing one finished game: both teams and marks, the
+quarter-by-quarter score, a play-by-play win-probability chart, dueling
+traditional and advanced box-score bars, per-quarter momentum, a drive-flow
+ribbon, and the players who moved the game most by PPA. Run it with
+`python -m src.viz.postgame_report`, or
+`render_postgame_report(game_id, out_stem)` for any completed game
+(`resolve_game_id(year, week, team)` looks up the id from names). Output is a
+standalone HTML page plus a 2x PNG in `src/viz/output/`. To email one,
+`send_postgame_report(game_id)` in `src/app/send_report.py` renders it and
+sends the PNG inline — like `send_gt_report`, never the raw HTML.
+
+It's the one place in `src/viz/` that deliberately ignores the `viz-style`
+house style — no `great_tables`, no light striped tables. It's a dark,
+hand-built HTML + inline-SVG poster with team-branded color, rendered through
+`render_html_to_png` like everything else. Don't refactor it toward
+`src/viz/style.py`; the only thing it borrows is the source/attribution
+wording.
+
+Everything it needs is cached per game id, so a rebuilt report costs zero API
+calls. It draws on the endpoints only meaningful after a game is final —
+`get_advanced_box_score` (havoc, field position, scoring opportunities,
+rushing detail, and efficiency split by quarter), `get_win_probability` joined
+to `get_plays` for a real game-clock axis, `get_drives`, `get_game_team_stats`,
+`get_game_player_stats`, plus betting lines, weather, Elo and polls for
+pre-game context.
+
 ### Game film sync
 
 `src/data/game_film.py` and `src/data/scoreboard_ocr.py` connect local game
