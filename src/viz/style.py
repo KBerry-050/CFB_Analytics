@@ -76,22 +76,28 @@ def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
 
 
 def add_turf_frame(fig: plt.Figure, dpi: int = 150, margin_ratio: float = 0.055, border_width: int = 8) -> bytes:
-    """Composite a rendered chart onto a bigger turf-patterned canvas, like a
-    white card laid on the field — the same mowed-stripe-plus-yard-line
-    pattern as the webapp shell's page background behind its white GT
-    tables (`_inject_field_theme` in src/app/webapp.py), applied here to a
-    standalone chart image instead of an app page. A gold border frames the
-    card itself, echoing that shell's scoreboard styling.
-
-    Compositing happens with Pillow, not matplotlib, since the chart has
-    already been fully drawn by this point — so this returns PNG bytes
-    (write straight to a file, or pass as an email's inline image) rather
-    than a Figure or an Axes to keep drawing on.
-    """
+    """`frame_png_with_turf`, but for a matplotlib figure that hasn't been
+    rendered to an image yet — see that function for what the frame is."""
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=dpi, facecolor="white")
-    buf.seek(0)
-    card = Image.open(buf).convert("RGB")
+    return frame_png_with_turf(buf.getvalue(), margin_ratio=margin_ratio, border_width=border_width)
+
+
+def frame_png_with_turf(png_bytes: bytes, margin_ratio: float = 0.055, border_width: int = 8) -> bytes:
+    """Composite an already-rendered PNG (a matplotlib chart via
+    `add_turf_frame`, or e.g. a GT table rendered through
+    `render_html_to_png`) onto a bigger turf-patterned canvas, like a white
+    card laid on the field — the same mowed-stripe-plus-yard-line pattern as
+    the webapp shell's page background behind its white GT tables
+    (`_inject_field_theme` in src/app/webapp.py), applied here to a
+    standalone image instead of an app page. A gold border frames the card
+    itself, echoing that shell's scoreboard styling.
+
+    Returns PNG bytes (write straight to a file, or pass as an email's
+    inline image) rather than a Pillow Image, so callers don't need Pillow
+    themselves just to get the frame applied.
+    """
+    card = Image.open(io.BytesIO(png_bytes)).convert("RGB")
 
     margin = int(round(max(card.size) * margin_ratio))
     canvas_size = (card.width + 2 * margin, card.height + 2 * margin)

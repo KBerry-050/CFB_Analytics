@@ -58,6 +58,7 @@ def render_html_to_png(
     width: int = 1600,
     height: int = 1600,
     crop: bool = True,
+    scale: int = 1,
 ) -> Path:
     """Render an HTML string to a PNG via headless Chrome.
 
@@ -65,6 +66,12 @@ def render_html_to_png(
     clients (Gmail, Outlook, ...) don't reliably support the CSS grid/flexbox
     great_tables emits, so raw GT HTML must never be sent directly as an email
     body. See the `viz-style` skill.
+
+    `scale` is the device pixel ratio: 2 renders a retina-sharp image at twice
+    the pixel dimensions, which matters for pages carrying small type or SVG
+    hairlines. `width`/`height` stay in CSS pixels either way. Note that Chrome
+    captures the viewport, not the full page — `height` must cover the whole
+    page or the bottom is cut off.
     """
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -79,6 +86,7 @@ def render_html_to_png(
                 "--disable-gpu",
                 f"--screenshot={out_path}",
                 f"--window-size={width},{height}",
+                f"--force-device-scale-factor={scale}",
                 f"file://{html_path.resolve()}",
             ],
             check=True,

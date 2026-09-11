@@ -1,13 +1,10 @@
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 from matplotlib.patches import Rectangle
 
 from src.data.team_profile import get_all_teams_records, get_all_transfers
 from src.data.teams import download_logo, get_teams
-from src.viz.style import add_chart_source_note, apply_matplotlib_style
+from src.viz.style import add_chart_source_note, add_logo_marker, apply_matplotlib_style
 
 LOGO_ZOOM = 0.05
 INDIANA_HIGHLIGHT_COLOR = "#d4af37"
@@ -41,14 +38,6 @@ Y_METRICS = {
         "bad_term": "UNDERPERFORMED",
     },
 }
-
-
-def _add_logo(ax: plt.Axes, x: float, y: float, image_path: Path, zoom: float = LOGO_ZOOM) -> AnnotationBbox:
-    img = plt.imread(image_path)
-    imagebox = OffsetImage(img, zoom=zoom)
-    ab = AnnotationBbox(imagebox, (x, y), frameon=False, pad=0)
-    ax.add_artist(ab)
-    return ab
 
 
 def build_transfer_portal_vs_wins_data(year: int, conference: str | None = None) -> pd.DataFrame:
@@ -173,7 +162,7 @@ def transfer_portal_vs_wins_scatter(year: int, conference: str | None = None, y_
     # one conference) get bigger logos so they stay legible.
     logo_zoom = LOGO_ZOOM if len(df) > 40 else LOGO_ZOOM * 1.8
     for _, row in df.iterrows():
-        _add_logo(ax, row["total_transfers"], row[y_col], row["logo_path"], zoom=logo_zoom)
+        add_logo_marker(ax, row["total_transfers"], row[y_col], row["logo_path"], zoom=logo_zoom)
     _highlight_indiana(ax, df, y_col)
 
     ax.set_axisbelow(True)
