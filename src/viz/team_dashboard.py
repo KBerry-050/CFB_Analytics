@@ -14,6 +14,7 @@ from src.data.team_profile import (
     get_team_talent,
 )
 from src.data.teams import get_teams
+from src.viz.matchup_preview import team_entering_season_metrics
 from src.viz.render import combine_gt_tables, render_html_to_png
 from src.viz.style import (
     LOSS_COLOR,
@@ -225,18 +226,14 @@ def team_game_log_table(team: str, year: int) -> GT:
     return gt
 
 
-_POSITION_GROUP_ORDER = {
-    pos: i
-    for i, pos in enumerate(["QB", "RB", "WR", "TE", "OL", "DL", "LB", "CB", "S", "LS", "P", "PK"])
-}
 _CLASS_YEAR_LABEL = {1: "Fr", 2: "So", 3: "Jr", 4: "Sr", 5: "5th"}
 
 
 def team_roster_table(team: str, year: int) -> GT:
-    """One row per player: jersey, position, name, class, height/weight, hometown."""
+    """One row per player, sorted by jersey number: jersey, position, name,
+    class, height/weight, hometown."""
     roster = get_team_roster(team, year).copy()
-    roster["position_order"] = roster["position"].map(_POSITION_GROUP_ORDER).fillna(99)
-    roster = roster.sort_values(["position_order", "jersey"], na_position="last").reset_index(drop=True)
+    roster = roster.sort_values("jersey", na_position="last").reset_index(drop=True)
 
     df = pd.DataFrame(
         {
@@ -333,6 +330,62 @@ def team_schedule_table(team: str, year: int) -> GT:
     gt = base_table(gt)
     gt = style_team_text_by_color(gt, df["color"].tolist(), "opponent")
     return gt
+
+
+def team_metrics_table(team: str, year: int) -> GT:
+    """Single-row scorecard of season-entering signals: preseason SP+/FPI,
+    recruiting/talent for the incoming class, and returning production.
+    Built from `team_entering_season_metrics` (shared with the matchup-preview
+    tool), which is deliberately safe for a season that hasn't been played
+    yet — no SRS/Elo/box-score dependency, unlike `team_season_summary_table`."""
+    metrics = team_entering_season_metrics(team, year)
+
+    def fmt(value, spec):
+        return "N/A" if value is None else format(value, spec)
+
+    row = {
+        "team": team,
+        "record": metrics["record"] or "N/A",
+        "sp_rating": fmt(metrics["sp_rating"], ".1f"),
+        "sp_rank": "N/A" if metrics["sp_rank"] is None else f"No. {metrics['sp_rank']:.0f}",
+        "fpi": fmt(metrics["fpi"], ".1f"),
+        "fpi_rank": "N/A" if metrics["fpi_rank"] is None else f"No. {metrics['fpi_rank']:.0f}",
+        "recruiting_rank": "N/A" if metrics["recruiting_rank"] is None else f"No. {metrics['recruiting_rank']:.0f}",
+        "talent": fmt(metrics["talent"], ".1f"),
+        "returning_prod_pct": "N/A" if metrics["returning_prod_pct"] is None else f"{metrics['returning_prod_pct']:.0%}",
+    }
+    df = pd.DataFrame([row])
+
+    gt = (
+        GT(df)
+        .tab_header(
+            title=team_header_title(f"{team} — {year} Metrics", _team_logo_url(team, year)),
+            subtitle=f"{year - 1} record: {row['record']}",
+        )
+        .cols_hide(columns=["team", "record"])
+        .cols_label(
+            sp_rating=html("SP+"),
+            sp_rank=html("SP+ Rank"),
+            fpi=html("FPI"),
+            fpi_rank=html("FPI Rank"),
+            recruiting_rank=html("Recruiting"),
+            talent=html("Talent"),
+            returning_prod_pct=html("Returning Prod."),
+        )
+        .cols_align(align="center", columns=list(df.columns.drop(["team", "record"])))
+        .cols_width(
+            {
+                "sp_rating": RATING_COL_WIDTH,
+                "sp_rank": RATING_COL_WIDTH,
+                "fpi": RATING_COL_WIDTH,
+                "fpi_rank": RATING_COL_WIDTH,
+                "recruiting_rank": "110px",
+                "talent": "90px",
+                "returning_prod_pct": PERCENT_COL_WIDTH,
+            }
+        )
+    )
+    return base_table(gt)
 
 
 def write_team_preview(team: str, year: int, out_path: str) -> str:

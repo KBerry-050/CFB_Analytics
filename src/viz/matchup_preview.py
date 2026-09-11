@@ -65,7 +65,7 @@ def _returning_by_position(team: str, prior_year: int, year: int) -> dict[str, f
     return result
 
 
-def _team_matchup_data(team: str, year: int) -> dict:
+def team_entering_season_metrics(team: str, year: int) -> dict:
     """Season-entering signals for `team` going into `year`: preseason
     SP+/FPI, recruiting/talent for the incoming class, returning production,
     and prior-year record for context — nothing that depends on `year`'s
@@ -101,8 +101,8 @@ def _team_matchup_data(team: str, year: int) -> dict:
 def build_matchup_preview(team_a: str, team_b: str, year: int) -> pd.DataFrame:
     """One row per metric: section, label, formatted team_a/team_b values,
     and which side (if either) gets "edge" styling."""
-    data_a = _team_matchup_data(team_a, year)
-    data_b = _team_matchup_data(team_b, year)
+    data_a = team_entering_season_metrics(team_a, year)
+    data_b = team_entering_season_metrics(team_b, year)
 
     rows = [
         {

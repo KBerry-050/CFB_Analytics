@@ -37,6 +37,18 @@ App code doesn't build tables/charts directly — it calls into `src/viz`.
 
 `notebooks/` is for exploratory analysis only, not production pipeline code.
 
+### Webapp
+
+`src/app/webapp.py` is a local-only Streamlit app for interactively browsing
+any FBS team: search by name, then view its roster, schedule, and
+season-entering metrics (`src/viz/team_dashboard.py`), or run the
+matchup-analysis tool against any other team (`src/viz/matchup_preview.py`).
+Run it with `streamlit run src/app/webapp.py`. It's a thin wiring layer only
+— it embeds `great_tables` HTML straight from `src/viz` and never fetches
+data itself; searching a team not yet cached hits the live CFBD API and
+caches it via the normal `cached_dataframe` path (`src/data/cache.py`), so
+repeat lookups are instant.
+
 ### Game film sync
 
 `src/data/game_film.py` and `src/data/scoreboard_ocr.py` connect local game
