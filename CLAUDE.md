@@ -61,6 +61,36 @@ it — `python -m src.viz.game_film_review --play-sync-csv ... --frame-cache-dir
 Not yet built: anything player-tracking/CV related — this only maps a video
 timestamp to a play, not what happened in the frame.
 
+### Field viewer
+
+`src/app/game_field_viewer.py` is a local-only Streamlit app
+(`streamlit run src/app/game_field_viewer.py`) that draws one team's
+offensive plays for a game on an actual field diagram — a line from each
+play's starting to ending field position, colored by gain/loss, with the
+ball-carrier's headshot at the endpoint — filterable by quarter and player.
+Parameterized by team/year/week, not hardcoded to one game.
+
+The field drawing itself lives in `src/viz/field_plot.py`
+(`build_field_figure`). Its data comes from
+`get_offensive_plays_with_field_position()` in `src/data/postgame.py`, which
+attributes each rush/reception to a ball-carrier by regex-parsing the jersey
+number out of CFBD's play-text description (`_ball_carrier_plays()`) — CFBD's
+play-by-play carries no structured player field. That attribution is
+best-effort: an unparseable play is skipped rather than raising, with the
+skipped count surfaced via the DataFrame's `.attrs["unparsed_count"]` so a
+caller can sanity-check it.
+
+Player names/positions/photos aren't available from CFBD at all, so they come
+from a hand-curated roster file per team/season,
+`src/data/rosters/{team}_{year}.json` (slug from `roster_slug()` in
+`src/data/teams.py`; see `load_roster_lookup()`'s docstring for the file
+shape). Add a team's next season the same way — there's no live-scraping
+path by design, since scraping a specific roster page's HTML in a deployed
+app is fragile. A jersey number missing from the roster file falls back to
+CFBD's own abbreviated name with no photo, rather than failing; a missing
+roster file entirely is surfaced as an in-app notice rather than only
+inferred play-by-play from a wall of bare jersey numbers.
+
 ## Secrets
 
 `CFBD_API_KEY` and SMTP credentials are read from environment variables via

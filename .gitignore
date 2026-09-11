@@ -4,6 +4,7 @@ __pycache__/
 .env
 credentials/
 src/data/logos/
+src/data/player_photos/
 src/data/output/
 src/viz/output/
 *.parquet
